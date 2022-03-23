@@ -36,25 +36,30 @@ Style2D_Type :: enum u8 {
     LINE;
     SYMBOLS;
     BARS;
+    MULTI;
 }
 Style2D_Line :: struct {
     using _s: Style2D;
     color: Color;
+    thickness: float32;
 }
-line :: (color: Color = RED) -> *Style2D_Line {
+line :: (color: Color = RED, thickness: float32 = 2.0) -> *Style2D_Line {
     res := New(Style2D_Line);
     res.type = .LINE;
     res.color = color;
+    res.thickness = thickness;
     return res;
 }
 Style2D_Symbols :: struct {
     using _s: Style2D;
     color: Color;
+    size: float32;
 }
-symbols :: (color: Color = RED) -> *Style2D_Symbols {
+symbols :: (color: Color = RED, size: float32 = 4.0) -> *Style2D_Symbols {
     res := New(Style2D_Symbols);
     res.type = .SYMBOLS;
     res.color = color;
+    res.size = size;
     return res;
 }
 Style2D_Bars :: struct {
@@ -65,6 +70,16 @@ bars :: (color: Color) -> *Style2D_Bars {
     res := New(Style2D_Bars);
     res.type = .BARS;
     res.color = color;
+    return res;
+}
+Style2D_Multi :: struct {
+    using _s: Style2D;
+    styles: []*Style2D;
+}
+multi :: (styles: ..*Style2D) -> *Style2D_Multi {
+    res := New(Style2D_Multi);
+    res.type = .MULTI;
+    res.styles = styles;
     return res;
 }
 
@@ -122,40 +137,53 @@ data2d :: (
     res.style = style;
     return res;
 }
-draw :: (using data: Data2D) {
-    if style.type == {
-        case .LINE;
-            linestyle := cast(*Style2D_Line)style;
-            DrawLines(v, linestyle.color, 2.0);
-        case .SYMBOLS;
-            symbolstyle := cast(*Style2D_Symbols)style;
-            for v {
-                DrawCircleV(it, 4.0, symbolstyle.color);
-            }
-        case .BARS;
-            barstyle := cast(*Style2D_Bars)style;
-            for i: 0..v.count-2 {
-                h := cast(s32)(v[i].y-zero.y);
+draw :: (data: Data2D) {
 
-                if h > 0 {
-                    DrawRectangle(
-                        cast(s32)(v[i].x), 
-                        cast(s32)(zero.y),
-                        cast(s32)(v[i+1].x-v[i].x) + 1, 
-                        h,
-                        barstyle.color
-                    );
-                } else {
-                    DrawRectangle(
-                        cast(s32)(v[i].x),
-                        cast(s32)(zero.y + h), 
-                        cast(s32)(v[i+1].x-v[i].x) + 1, 
-                        -h,
-                        barstyle.color
-                    );
+    draw_style :: (s: *Style2D) #expand {
+        if s.type == {
+            case .LINE;
+                linestyle := cast(*Style2D_Line)s;
+                DrawLines(data.v, linestyle.color, linestyle.thickness);
+            case .SYMBOLS;
+                symbolstyle := cast(*Style2D_Symbols)s;
+                for data.v {
+                    DrawCircleV(it, symbolstyle.size, symbolstyle.color);
                 }
-            }
+            case .BARS;
+                barstyle := cast(*Style2D_Bars)s;
+                for i: 0..data.v.count-2 {
+                    h := cast(s32)(data.v[i].y-data.zero.y);
+
+                    if h > 0 {
+                        DrawRectangle(
+                            cast(s32)(data.v[i].x), 
+                            cast(s32)(data.zero.y),
+                            cast(s32)(data.v[i+1].x-data.v[i].x) + 1, 
+                            h,
+                            barstyle.color
+                        );
+                    } else {
+                        DrawRectangle(
+                            cast(s32)(data.v[i].x),
+                            cast(s32)(data.zero.y + h), 
+                            cast(s32)(data.v[i+1].x-data.v[i].x) + 1, 
+                            -h,
+                            barstyle.color
+                        );
+                    }
+                }
+        }
     }
+
+    if data.style.type == .MULTI {
+        multistyle := cast(*Style2D_Multi)data.style;
+        for multistyle.styles {
+            draw_style(it);
+        }
+    } else {
+        draw_style(data.style);
+    }
+    
 }
 
 
