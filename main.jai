@@ -3,10 +3,10 @@
 
 
 
-simulation :: (thread: *Thread) -> s64 {
+simulation :: (_thread: *Thread = null) -> s64 {
 
     for *x {
-        <<it = -500.0 + 1000.0 * (cast(float32)it_index/cast(float32)N);
+        <<it = -500.0 + 1000.0 * (cast(float32)it_index/cast(float32)(N-1));
     }
 
     t0 := GetTime();
@@ -27,7 +27,7 @@ simulation :: (thread: *Thread) -> s64 {
 
 stop_simulation : bool = false;
 
-N :: 200;
+N :: 201;
 NP :: 20;
 x : [N]float32;
 y : [N]float32;
@@ -38,20 +38,24 @@ main :: () {
     print("Hello World\n");
 
 
-    sim := New(Thread);
-    thread_init(sim, simulation);
-    thread_start(sim);
 
 
     plot();
     axis := cartesian_axis_2d();
-    print("axis.datasets = %, count = %\n", axis.datasets, axis.datasets.count);
+    set_min_max(*axis.x_mapper, -600.0, 600.0);
+    set_min_max(*axis.y_mapper, -2.0, 2.0);
     ax_id := add_axis(axis);
-    print("ax_id = %\n", ax_id);
-    // plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
+    plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
     plot2d(line(BLUE), x, y);
-    // plot2d(symbols(), x, z);
+    plot2d(symbols(), x, z);
+    // plot_render();
 
+
+
+    sim := New(Thread);
+    thread_init(sim, simulation);
+    thread_start(sim);
+    // simulation(null);
 
     // stop everything
     plot_wait_for_close();

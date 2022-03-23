@@ -260,8 +260,8 @@ Axis :: struct {
 
 
 CartesianAxis2D :: struct {
-    using rect: Rectangle;
     using axis: Axis;
+    rect: Rectangle;
 
     x_mapper: Mapper;
     y_mapper: Mapper;
@@ -294,8 +294,6 @@ fit_into_rectangle :: (ax: *CartesianAxis2D, rectangle: Rectangle, padding: Vect
 
 fit_data :: (using ax: CartesianAxis2D) {
     for datasets {
-        print("fit_data [%/%]\n", it_index, datasets.count-1);
-        print("it = %\n", it);
         if it_index == 0 {
             fit_data(*x_mapper, it.x, true);
             fit_data(*y_mapper, it.y, true);
@@ -383,8 +381,8 @@ draw :: (using ax: CartesianAxis2D) {
     }
 
     if show_grid {
-        draw_gridlines(true , -1.0, GREY, 2.0, true);
-        draw_gridlines(false, -1.0, GREY, 2.0, true);
+        draw_gridlines(true , -1.5, GREY, 1.5, true);
+        draw_gridlines(false, -1.5, GREY, 1.5, true);
     }
 
     for datasets {
@@ -445,7 +443,7 @@ plot :: () {
     thread_start(_plot.thread);
 }
 
-plot_render :: (_thread: *Thread) -> s64 {
+plot_render :: (_thread: *Thread = null) -> s64 {
     // SetConfigFlags(xx (ConfigFlags.MSAA_4X_HINT | ConfigFlags.WINDOW_HIGHDPI | ConfigFlags.WINDOW_RESIZABLE));
     SetConfigFlags(xx (ConfigFlags.MSAA_4X_HINT | ConfigFlags.WINDOW_RESIZABLE));
     Window(cast(s32)window_rect.width, cast(s32)window_rect.height, "raylib [core] example - basic window [Jai]");
@@ -499,27 +497,12 @@ plot2d :: (
     extra_mappers: []Mapper = .[]
 ) {
     dataset := data2d(x, y, extra, extra_mappers, style);
-
     array_add(*_plot.active_axis.datasets, dataset);
-    print("active_axis % <-> axes[0] %\n", _plot.active_axis, _plot.axes[0]);
-    print("equal? %\n", _plot.active_axis == _plot.axes[0]);
-
-    print("active_axis.datasets = %\n", *(_plot.active_axis).datasets);
-    print("axes[0].datasets = %\n"    , *(_plot.axes[0]).datasets);
-
-    // print("<<active_axis = %\n", <<_plot.active_axis);
-    // print("<<axes[0] = %\n"    , <<_plot.axes[0]);
-
-    print("active_axis.datasets = %\n", (_plot.active_axis).datasets);
-    print("axes[0].datasets = %\n"    , (_plot.axes[0]).datasets);
 }
 
 plot_wait_for_close :: () {
     while !thread_is_done(_plot.thread) {
         sleep_milliseconds(100);
-        // print("waiting...\n");
     }
-
-    print("plot successfully closed.\n");
 }
 
