@@ -502,9 +502,13 @@ plot2d :: (
 
     array_add(*_plot.active_axis.datasets, dataset);
     print("active_axis % <-> axes[0] %\n", _plot.active_axis, _plot.axes[0]);
+    print("equal? %\n", _plot.active_axis == _plot.axes[0]);
 
-    print("<<active_axis = %\n", <<_plot.active_axis);
-    print("<<axes[0] = %\n"    , <<_plot.axes[0]);
+    print("active_axis.datasets = %\n", *(_plot.active_axis).datasets);
+    print("axes[0].datasets = %\n"    , *(_plot.axes[0]).datasets);
+
+    // print("<<active_axis = %\n", <<_plot.active_axis);
+    // print("<<axes[0] = %\n"    , <<_plot.axes[0]);
 
     print("active_axis.datasets = %\n", (_plot.active_axis).datasets);
     print("axes[0].datasets = %\n"    , (_plot.axes[0]).datasets);
