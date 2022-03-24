@@ -235,6 +235,7 @@ Mapper_Type :: enum u8 {
 Mapper :: struct {
     type: Mapper_Type = .LINEAR;
 }
+
 map :: (m: *Mapper, x: float32) -> float32 {
     if m.type == {
         case .LINEAR;
@@ -243,6 +244,16 @@ map :: (m: *Mapper, x: float32) -> float32 {
         case .CONSTRAINT;
             cm := cast(*Mapper_Constraint)m;
             return map(cm, x);
+    }
+}
+map_inv :: (m: *Mapper, y: float32) -> float32 {
+    if m.type == {
+        case .LINEAR;
+            lm := cast(*Mapper_Linear)m;
+            return map_inv(lm, y);
+        case .CONSTRAINT;
+            cm := cast(*Mapper_Constraint)m;
+            return map_inv(cm, y);
     }
 }
 map_dx :: (m: *Mapper, dx: float32) -> float32 {
@@ -288,6 +299,9 @@ mapper_linear :: (min_x: float32, max_x: float32, min_y: float32, max_y: float32
 map :: inline (using lm: *Mapper_Linear, x: float32) -> float32 {
     return y0 + dydx * x;
 }
+map_inv :: inline (using lm: *Mapper_Linear, y: float32) -> float32 {
+    return (y - y0)/dydx;
+}
 map_dx :: inline (using lm: *Mapper_Linear, dx: float32) -> float32 {
     return dydx * dx;
 }
@@ -330,6 +344,9 @@ mapper_constraint :: (
 }
 map :: inline (using cm: *Mapper_Constraint, x: float32) -> float32 {
     return map(inner, x);
+}
+map_inv :: inline (using cm: *Mapper_Constraint, y: float32) -> float32 {
+    return map_inv(inner, y);
 }
 map_dx :: inline (using cm: *Mapper_Constraint, dx: float32) -> float32 {
     return map_dx(inner, dx);
@@ -500,9 +517,11 @@ draw :: (using ax: CartesianAxis2D) {
 
     draw_gridlines :: ($x_axis: bool, exponent_shift: float32, color: Color, thickness: float = 1.0) #expand {
         #if x_axis {
-            mi, ma := bounds_x(*ax);
+            mi := map_inv(x_mapper, x      );
+            ma := map_inv(x_mapper, x+width);
         } else {
-            mi, ma := bounds_y(*ax);
+            mi := map_inv(y_mapper, y       );
+            ma := map_inv(y_mapper, y+height);
         }
         ticks := ticks_linear(mi, ma, 10.0, exponent_shift);
         defer array_free(ticks);
@@ -537,8 +556,8 @@ draw :: (using ax: CartesianAxis2D) {
     }
 
     if show_subgrid {
-        draw_gridlines(true , -2.0, LIGHTGREY, 1.0);
-        draw_gridlines(false, -2.0, LIGHTGREY, 1.0);
+        draw_gridlines(true , -1.0, LIGHTGREY, 1.0);
+        draw_gridlines(false, -1.0, LIGHTGREY, 1.0);
     }
 
     for datasets {
@@ -553,8 +572,8 @@ draw :: (using ax: CartesianAxis2D) {
     }
 
     if show_grid {
-        draw_gridlines(true , -1.0, Color.{ 130, 130, 130, 125 }, 1.5);
-        draw_gridlines(false, -1.0, Color.{ 130, 130, 130, 125 }, 1.5);
+        draw_gridlines(true , -0.5, Color.{ 130, 130, 130, 125 }, 1.5);
+        draw_gridlines(false, -0.5, Color.{ 130, 130, 130, 125 }, 1.5);
     }
 
     if show_zero_lines {
