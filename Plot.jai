@@ -229,6 +229,7 @@ draw :: (data: Data2D) {
 
 Mapper_Type :: enum u8 {
     LINEAR;
+    CONSTRAINT;
 }
 
 Mapper :: struct {
@@ -239,6 +240,9 @@ map :: (m: *Mapper, x: float32) -> float32 {
         case .LINEAR;
             lm := cast(*Mapper_Linear)m;
             return map(lm, x);
+        case .CONSTRAINT;
+            cm := cast(*Mapper_Constraint)m;
+            return map(cm, x);
     }
 }
 map_dx :: (m: *Mapper, dx: float32) -> float32 {
@@ -246,6 +250,9 @@ map_dx :: (m: *Mapper, dx: float32) -> float32 {
         case .LINEAR;
             lm := cast(*Mapper_Linear)m;
             return map_dx(lm, dx);
+        case .CONSTRAINT;
+            cm := cast(*Mapper_Constraint)m;
+            return map_dx(cm, dx);
     }
 }
 fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
@@ -253,8 +260,13 @@ fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y
         case .LINEAR;
             lm := cast(*Mapper_Linear)m;
             fit_bounds(lm, min_x, max_x, min_y, max_y);
+        case .CONSTRAINT;
+            cm := cast(*Mapper_Constraint)m;
+            fit_bounds(cm, min_x, max_x, min_y, max_y);
     }
 }
+
+
 
 Mapper_Linear :: struct {
     using _m: Mapper;
@@ -267,6 +279,12 @@ mapper_linear :: (y0: float = 0.0, dydx: float32 = 1.0) -> *Mapper_Linear {
     res.dydx = dydx;
     return res;
 }
+mapper_linear :: (min_x: float32, max_x: float32, min_y: float32, max_y: float32) -> *Mapper_Linear {
+    res := New(Mapper_Linear);
+    res.type = .LINEAR;
+    fit_bounds(res, min_x, max_x, min_y, max_y);
+    return res;
+}
 map :: inline (using lm: *Mapper_Linear, x: float32) -> float32 {
     return y0 + dydx * x;
 }
@@ -277,6 +295,52 @@ fit_bounds :: (using lm: *Mapper_Linear, min_x: float32, max_x: float32, min_y: 
     dydx = (max_y-min_y)/(max_x-min_x);
     // dydx * max_x + y0 = max_y => y0 = max_y - dydx * max_x
     y0 = max_y - dydx * max_x;
+}
+
+
+
+
+Mapper_Constraint :: struct {
+    using _m: Mapper;
+    inner: *Mapper;
+
+    fixed_min_x, fixed_max_x, fixed_min_y, fixed_max_y: bool = false;
+    min_x, max_x, min_y, max_y : float32;
+
+    // fixed_scale: bool = false;
+    // scale, center: float32;
+}
+mapper_constraint :: (
+    inner: *Mapper, 
+    min_x: float32 = Math.FLOAT32_NAN,
+    max_x: float32 = Math.FLOAT32_NAN,
+    min_y: float32 = Math.FLOAT32_NAN,
+    max_y: float32 = Math.FLOAT32_NAN
+) -> *Mapper_Constraint {
+    res := New(Mapper_Constraint);
+    res.type = .CONSTRAINT;
+    res.inner = inner;
+
+    if !Math.isnan(min_x) { res.min_x = min_x; res.fixed_min_x = true; }
+    if !Math.isnan(max_x) { res.max_x = max_x; res.fixed_max_x = true; }
+    if !Math.isnan(min_y) { res.min_y = min_y; res.fixed_min_y = true; }
+    if !Math.isnan(max_y) { res.max_y = max_y; res.fixed_max_y = true; }
+
+    return res;
+}
+map :: inline (using cm: *Mapper_Constraint, x: float32) -> float32 {
+    return map(inner, x);
+}
+map_dx :: inline (using cm: *Mapper_Constraint, dx: float32) -> float32 {
+    return map_dx(inner, dx);
+}
+fit_bounds :: (cm: *Mapper_Constraint, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
+    mi_x := ifx cm.fixed_min_x then cm.min_x else min_x;
+    ma_x := ifx cm.fixed_max_x then cm.max_x else max_x;
+    mi_y := ifx cm.fixed_min_y then cm.min_y else min_y;
+    ma_y := ifx cm.fixed_max_y then cm.max_y else max_y;
+
+    fit_bounds(cm.inner, mi_x, ma_x, mi_y, ma_y);
 }
 
 

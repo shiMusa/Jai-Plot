@@ -51,7 +51,9 @@ main :: () {
 
 
     plot();
-    axis := cartesian_axis_2d();
+    x_mapper := mapper_constraint(mapper_linear(), min_x = -10.0, max_x = 10.0);
+    y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
+    axis := cartesian_axis_2d(x_mapper, y_mapper);
     // set_min_max(*axis.x_mapper, -10.0, 10.0);
     // set_min_max(*axis.y_mapper, -2.0, 2.0);
     // set_scale(*axis.x_mapper, scale = 100.0);
