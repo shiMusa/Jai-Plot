@@ -52,8 +52,10 @@ main :: () {
 
     plot();
     axis := cartesian_axis_2d();
-    set_min_max(*axis.x_mapper, -10.0, 10.0);
-    set_min_max(*axis.y_mapper, -2.0, 2.0);
+    // set_min_max(*axis.x_mapper, -10.0, 10.0);
+    // set_min_max(*axis.y_mapper, -2.0, 2.0);
+    set_scale(*axis.x_mapper, scale = 100.0);
+    set_scale(*axis.y_mapper, scale = 100.0);
     ax_id := add_axis(axis);
     plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
     plot2d(line(BLUE), x, y);

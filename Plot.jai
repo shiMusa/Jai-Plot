@@ -20,6 +20,22 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding: Vector4) {
 
 
 
+Mouse_State :: enum u8 {
+    FREE;
+    DRAGGING;
+}
+
+Mouse :: struct {
+    x, y, _x, _y: s32 = 0;
+    state: Mouse_State = .FREE;
+    active_axis: *Axis = null;
+}
+
+
+
+
+
+
 
 //  ######  ######## ##    ## ##       ########     #######  ########
 // ##    ##    ##     ##  ##  ##       ##          ##     ## ##     ##
@@ -208,46 +224,75 @@ Mapper_Type :: enum u8 {
 
 Mapper :: struct {
     type: Mapper_Type = .LINEAR;
+}
+
+Mapper_Linear :: struct {
+    using _m: Mapper = Mapper.{.LINEAR};
+
     from_min, from_max: float32;
     to_min, to_max: float32;
     fixed_min, fixed_max: bool;
+    
+    fixed_scale: bool;
+    scale: float32;
+    center: float32;
 }
-mapper :: (from_min: float32, from_max: float32, to_min: float32, to_max: float32, type: Mapper_Type = .LINEAR) -> Mapper {
-    res : Mapper = ---;
-    res.type = type;
+
+mapper_linear :: (from_min: float32, from_max: float32, to_min: float32, to_max: float32) -> Mapper_Linear {
+    res : Mapper_Linear;
     res.from_min = from_min;
     res.from_max = from_max;
     res.to_min   = to_min;
     res.to_max   = to_max;
     res.fixed_max = false;
     res.fixed_min = false;
+    res.fixed_scale = false;
+    res.scale = 1.0;
+    res.center = 0.0;
     return res;
 }
-set_min :: (m: *Mapper, min: float32) {
+set_min :: (m: *Mapper_Linear, min: float32) {
     m.from_min = min;
     m.fixed_min = true;
+    m.fixed_scale = false;
 }
-set_max :: (m: *Mapper, max: float32) {
+set_max :: (m: *Mapper_Linear, max: float32) {
     m.from_max = max;
     m.fixed_max = true;
+    m.fixed_scale = false;
 }
-set_min_max :: (m: *Mapper, min: float32, max: float32) {
+set_min_max :: (m: *Mapper_Linear, min: float32, max: float32) {
     set_min(m, min);
     set_max(m, max);
 }
-map :: inline (using mapper: Mapper, x: float32) -> float32 {
+set_scale :: (m: *Mapper_Linear, scale: float32, center: float32 = 0.0) {
+    m.fixed_scale = true;
+    m.scale = scale;
+    m.center = center;
+    m.fixed_max = false;
+    m.fixed_min = false;
+}
+map :: inline (using mapper: Mapper_Linear, x: float32) -> float32 {
+    s := ifx fixed_scale then scale else (to_max-to_min)/(from_max-from_min);
+
     if type == {
         case .LINEAR;
-            return (x-from_min)/(from_max-from_min)*(to_max-to_min) + to_min;
+            if fixed_scale {
+                return (x-center) * s + (to_max + to_min)*0.5;
+            } else {
+                return (x-from_min) * s + to_min;
+            }
     }
 }
-map_delta :: inline (using mapper: Mapper, dx: float32) -> float32 {
+map_delta :: inline (using mapper: Mapper_Linear, dx: float32) -> float32 {
+    s := ifx fixed_scale then scale else (to_max-to_min)/(from_max-from_min);
+
     if type == {
         case .LINEAR;
-            return dx/(from_max-from_min)*(to_max-to_min);
+            return dx * s;
     }
 }
-fit_data :: (using mapper: *Mapper, vals: []float32, $reset: bool = true) {
+fit_data :: (using mapper: *Mapper_Linear, vals: []float32, $reset: bool = true) {
     #if reset {
         if !fixed_min then from_min = Math.FLOAT32_MAX;
         if !fixed_max then from_max = Math.FLOAT32_MIN;
@@ -279,6 +324,7 @@ Axis_Type :: enum u8 {
 Axis :: struct {
     datasets: [..]Data2D;
     axis_type: Axis_Type;
+    rect: Rectangle;
 }
 
 
@@ -289,24 +335,24 @@ Axis :: struct {
 
 CartesianAxis2D :: struct {
     using axis: Axis;
-    rect: Rectangle;
 
-    x_mapper: Mapper;
-    y_mapper: Mapper;
+    x_mapper: *Mapper;
+    y_mapper: *Mapper;
 
     show_frame: bool = true;
     show_zero_lines: bool = true;
     show_grid: bool = true;
     show_subgrid: bool = true;
+    hide_overflow: bool = true;
 }
-cartesian_axis_2d :: () -> *CartesianAxis2D {
+cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *CartesianAxis2D {
     res := New(CartesianAxis2D);
     res.axis_type = .CARTESIAN_2D;
     res.rect      = window_rect;
     res.datasets  = NewResizableArray(0, Data2D);
     
-    res.x_mapper  = mapper(0.0, 1.0, window_rect.x, window_rect.x+window_rect.width);
-    res.y_mapper  = mapper(0.0, 1.0, window_rect.y, window_rect.y+window_rect.height);
+    res.x_mapper = ifx x_mapper then x_mapper else mapper_linear(0.0, 1.0, window_rect.x, window_rect.x+window_rect.width);
+    res.y_mapper = ifx y_mapper then y_mapper else mapper_linear(0.0, 1.0, window_rect.y, window_rect.y+window_rect.height);
     return res;
 }
 
@@ -331,7 +377,7 @@ fit_data :: (using ax: CartesianAxis2D) {
         }
     }
 }
-map :: (using ax: CartesianAxis2D) {
+map :: (using ax: CartesianAxis2D, shift:= Vector2.{0.0, 0.0}) {
     for *datasets {
         it.zero = vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
 
@@ -346,14 +392,31 @@ map :: (using ax: CartesianAxis2D) {
             it.v[i] = vec2(
                 map(x_mapper, it.x[i]),
                 map(y_mapper, it.y[i])
-            );
+            ) + shift;
             for e, ei: it.v_extra {
                 e[i] = map(it.extra_mappers[ei], it.extra[ei][i]);
             }
         }
     }
 }
-draw :: (using ax: CartesianAxis2D) {
+draw :: (using ax: CartesianAxis2D, shift := Vector2.{0.0, 0.0}) {
+
+    _x_to_min := x_mapper.to_min;
+    _x_to_max := x_mapper.to_max;
+    _y_to_min := y_mapper.to_min;
+    _y_to_max := y_mapper.to_max;
+    x_mapper.to_min += shift.x;
+    x_mapper.to_max += shift.x;
+    y_mapper.to_min += shift.y;
+    y_mapper.to_max += shift.y;
+    defer {
+        x_mapper.to_min = _x_to_min;
+        x_mapper.to_max = _x_to_max;
+        y_mapper.to_min = _y_to_min;
+        y_mapper.to_max = _y_to_max;
+    }
+
+
     grid_div := 10.0;
     min_grid_gap_px := 20.0;
 
@@ -408,13 +471,20 @@ draw :: (using ax: CartesianAxis2D) {
         draw_gridlines(false, -2.0, LIGHTGREY);
     }
 
-    if show_grid {
-        draw_gridlines(true , -1.5, GREY, 1.5, true);
-        draw_gridlines(false, -1.5, GREY, 1.5, true);
-    }
-
     for datasets {
         draw(it);
+    }
+
+    if hide_overflow {
+        DrawRectangleV(vec2(0.0,0.0), vec2(rect.width, rect.y), RAYWHITE);
+        DrawRectangleV(vec2(0.0, rect.y+rect.height), vec2(window_rect.width, window_rect.height), RAYWHITE);
+        DrawRectangleV(vec2(0.0,0.0), vec2(rect.x, window_rect.height), RAYWHITE);
+        DrawRectangleV(vec2(rect.x+rect.width,0.0), vec2(window_rect.width, window_rect.height), RAYWHITE);
+    }
+
+    if show_grid {
+        draw_gridlines(true , -1.5, Color.{ 130, 130, 130, 125 }, 1.5, true);
+        draw_gridlines(false, -1.5, Color.{ 130, 130, 130, 125 }, 1.5, true);
     }
 
     if show_zero_lines {
@@ -462,7 +532,7 @@ Plot :: struct {
 }
 
 _plot : Plot;
-
+mouse: Mouse;
 
 plot :: () {
     _plot.axes = NewResizableArray(0, *Axis);
@@ -484,6 +554,36 @@ plot_render :: (_thread: *Thread = null) -> s64 {
         window_rect.width  = cast(float)GetScreenWidth();
         window_rect.height = cast(float)GetScreenHeight();
 
+        if IsMouseButtonDown(0) && mouse.state == .FREE {
+            print("dragging\n");
+            mouse.state = .DRAGGING;
+            mouse._x = GetMouseX();
+            mouse._y = GetMouseY();
+            for _plot.axes {
+                if CheckCollisionPointRec(vec2(cast(float32)mouse._x, cast(float32)mouse._y), it.rect) {
+                    mouse.active_axis = it;
+                }
+            }
+        }
+        if !IsMouseButtonDown(0) && mouse.state == .DRAGGING {
+            print("free\n");
+            mouse.state = .FREE;
+            print("dx = %\n", mouse.x-mouse._x);
+            print("dy = %\n", mouse.y-mouse._y);
+            if mouse.active_axis.axis_type == {
+                case .CARTESIAN_2D;
+                    ax := cast(*CartesianAxis2D)mouse.active_axis;
+                    ax.x_mapper.to_min += cast(float32)(mouse.x-mouse._x);
+                    ax.x_mapper.to_max += cast(float32)(mouse.x-mouse._x);
+                    ax.y_mapper.to_min += cast(float32)(mouse.y-mouse._y);
+                    ax.y_mapper.to_max += cast(float32)(mouse.y-mouse._y);
+                    print("mouse drag assigned\n");
+            }
+        }
+        mouse.x = GetMouseX();
+        mouse.y = GetMouseY();
+
+
         Drawing();
         ClearBackground(RAYWHITE);
         Mode2D(camera);
@@ -494,8 +594,11 @@ plot_render :: (_thread: *Thread = null) -> s64 {
                     ax := cast(*CartesianAxis2D)it;
                     fit_into_rectangle(ax, window_rect, vec4(100.0,50.0,50.0,60.0));
                     fit_data(ax);
-                    map(ax);
-                    draw(ax);
+                    shift := ifx mouse.state == .DRAGGING && mouse.active_axis == ax then 
+                        vec2(cast(float32)(mouse.x-mouse._x), cast(float32)(mouse.y-mouse._y)) 
+                    else vec2();
+                    map(ax, shift);
+                    draw(ax, shift);
             }
         }
     }
