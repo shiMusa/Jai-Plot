@@ -177,22 +177,18 @@ draw :: (data: Data2D) {
             case .BARS;
                 barstyle := cast(*Style2D_Bars)s;
                 for i: 0..data.v.count-2 {
-                    h := cast(s32)(data.v[i].y-data.zero.y);
+                    h := data.v[i].y-data.zero.y;
 
                     if h > 0 {
-                        DrawRectangle(
-                            cast(s32)(data.v[i].x), 
-                            cast(s32)(data.zero.y),
-                            cast(s32)(data.v[i+1].x-data.v[i].x) + 1, 
-                            h,
+                        DrawRectangleV(
+                            vec2(data.v[i].x, data.zero.y), 
+                            vec2(data.v[i+1].x-data.v[i].x, h), 
                             barstyle.color
                         );
                     } else {
-                        DrawRectangle(
-                            cast(s32)(data.v[i].x),
-                            cast(s32)(data.zero.y + h), 
-                            cast(s32)(data.v[i+1].x-data.v[i].x) + 1, 
-                            -h,
+                        DrawRectangleV(
+                            vec2(data.v[i].x, data.zero.y+h), 
+                            vec2(data.v[i+1].x-data.v[i].x, -h), 
                             barstyle.color
                         );
                     }
