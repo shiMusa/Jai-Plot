@@ -66,18 +66,43 @@ line :: (color: Color = RED, thickness: float32 = 2.0) -> *Style2D_Line {
     res.thickness = thickness;
     return res;
 }
+
+
+SYMBOL_SIZE :: 128;
+Symbols :: enum u8 {
+    CIRCLE :: 0;
+}
+symbol_render_textures : [1]RenderTexture2D;
+init_symbol_texture :: () {
+    for *symbol_render_textures {
+        tex := LoadRenderTexture(SYMBOL_SIZE,SYMBOL_SIZE);
+        TextureMode(tex, #code {
+            ClearBackground(Color.{255,255,255,0});
+            if cast(Symbols)it_index == {
+                case Symbols.CIRCLE;
+                    DrawCircleV(0.5*vec2(SYMBOL_SIZE+0.5, SYMBOL_SIZE+0.5), SYMBOL_SIZE/2, WHITE);
+            }
+        });
+        <<it = tex;
+    }
+}
 Style2D_Symbols :: struct {
     using _s: Style2D;
     color: Color;
     size: float32;
+    symbol: Symbols;
 }
-symbols :: (color: Color = RED, size: float32 = 4.0) -> *Style2D_Symbols {
+symbols :: (symbol := Symbols.CIRCLE, color := RED, size: float32 = 4.0, symbol_resolution: s32 = 32) -> *Style2D_Symbols {
     res := New(Style2D_Symbols);
     res.type = .SYMBOLS;
     res.color = color;
     res.size = size;
+    res.symbol = .CIRCLE;
     return res;
 }
+
+
+
 Style2D_Bars :: struct {
     using _s: Style2D;
     color: Color;
@@ -172,7 +197,10 @@ draw :: (data: Data2D) {
             case .SYMBOLS;
                 symbolstyle := cast(*Style2D_Symbols)s;
                 for data.v {
-                    DrawCircleV(it, symbolstyle.size, symbolstyle.color);
+                    tex := symbol_render_textures[symbolstyle.symbol].texture;
+                    s := symbolstyle.size;
+                    DrawTextureEx( tex, it - vec2(s,s), 0.0, s/(0.5*SYMBOL_SIZE), symbolstyle.color);
+                    // DrawCircleV(it, symbolstyle.size, symbolstyle.color);
                 }
             case .BARS;
                 barstyle := cast(*Style2D_Bars)s;
@@ -616,6 +644,7 @@ Plot :: struct {
     thread: *Thread;
     axes: [..]*Axis;
     active_axis: *Axis;
+    running: bool = false;
 }
 
 _plot : Plot;
@@ -631,6 +660,10 @@ plot :: (msaa : bool = true, highdpi: bool = false) {
     _plot.thread = New(Thread);
     thread_init(_plot.thread, plot_render);
     thread_start(_plot.thread);
+
+    while !_plot.running {
+        sleep_milliseconds(10);
+    }
 }
 
 plot_render :: (_thread: *Thread = null) -> s64 {
@@ -638,6 +671,10 @@ plot_render :: (_thread: *Thread = null) -> s64 {
     SetTargetFPS(60);
 
     camera := camera2d();
+
+    init_symbol_texture();
+
+    _plot.running = true;
 
     while !WindowShouldClose() {
 

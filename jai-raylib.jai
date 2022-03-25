@@ -11,6 +11,16 @@ Window :: (width: s32, height: s32, title: string) #expand {
     `defer CloseWindow();
 }
 
+TextureMode :: (target: RenderTexture2D) #expand {
+    BeginTextureMode(target);
+    `defer EndTextureMode();
+}
+TextureMode :: (target: RenderTexture2D, code: Code) #expand {
+    BeginTextureMode(target);
+    #insert code;
+    EndTextureMode();
+}
+
 Drawing :: () #expand {
     BeginDrawing();
     `defer EndDrawing();
@@ -19,6 +29,12 @@ Drawing :: () #expand {
 Mode2D :: (camera: Camera2D) #expand {
     BeginMode2D(camera);
     `defer EndMode2D();
+}
+
+Mode2D :: (camera: Camera2D, code: Code) #expand {
+    BeginMode2D(camera);
+    #insert code;
+    EndMode2D();
 }
 
 DrawText :: (text: string, posx: s32, posy: s32, fontSize: s32, color: Color) {

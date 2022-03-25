@@ -54,10 +54,6 @@ cx : [361]float32;
 cy : [361]float32;
 
 main :: () {
-    print("Hello World\n");
-
-
-
 
     plot(highdpi=true);
     // x_mapper := mapper_constraint(mapper_linear(), min_x = -10.0, max_x = 10.0);
@@ -72,10 +68,10 @@ main :: () {
     ax_id := add_axis(axis);
     plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
     plot2d(multi(line(RAYWHITE, 6.0), line(BLUE)), x, y);
-    plot2d(multi(symbols(RAYWHITE, 6.0), symbols()), x, z);
+    plot2d(multi(symbols(color=RAYWHITE, size=6.0), symbols()), x, z);
 
     plot2d(line(SKYBLUE, 4.0), cx, cy);
-    plot2d(multi(symbols(SKYBLUE, 8.0), symbols(GOLD, 5.0)), vx, vy);
+    plot2d(multi(symbols(color=SKYBLUE, size=8.0), symbols(color=GOLD, size=5.0)), vx, vy);
     // plot_render();
 
 
