@@ -19,9 +19,9 @@ simulation :: (_thread: *Thread = null) -> s64 {
         t := GetTime() - t0;
 
         for i: 0..N-1 {
-            y[i] =  1.25*Math.sin(cast(float32)(t/10.0 * PI) + x[i]/5.0 * cast(float32)PI);
-            z[i] =  Math.cos(cast(float32)(t/13.0 * PI) + x[i]/7.0 * cast(float32)PI);
-            w[i] = -Math.sin(cast(float32)(t/16.0 * PI) + x[i]/4.0 * cast(float32)PI);
+            y[i] =  1.25 * Math.sin(cast(float32)(t/10.0 * PI) + x[i]/5.0 * cast(float32)PI);
+            z[i] =  0.8  *  Math.cos(cast(float32)(t/13.0 * PI) + x[i]/7.0 * cast(float32)PI);
+            w[i] = -1.0  * Math.sin(cast(float32)(t/16.0 * PI) + x[i]/4.0 * cast(float32)PI);
         }
 
 
@@ -71,8 +71,8 @@ main :: () {
     // set_scale(*axis.y_mapper, scale = 100.0);
     ax_id := add_axis(axis);
     plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
-    plot2d(line(BLUE), x, y);
     plot2d(multi(symbols(RAYWHITE, 6.0), symbols()), x, z);
+    plot2d(line(BLUE), x, y);
 
     plot2d(line(SKYBLUE, 4.0), cx, cy);
     plot2d(multi(symbols(SKYBLUE, 8.0), symbols(GOLD, 5.0)), vx, vy);

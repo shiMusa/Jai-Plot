@@ -635,6 +635,7 @@ plot :: () {
 plot_render :: (_thread: *Thread = null) -> s64 {
     // SetConfigFlags(xx (ConfigFlags.MSAA_4X_HINT | ConfigFlags.WINDOW_HIGHDPI | ConfigFlags.WINDOW_RESIZABLE));
     SetConfigFlags(xx (ConfigFlags.MSAA_4X_HINT | ConfigFlags.WINDOW_RESIZABLE));
+    // SetConfigFlags(xx (ConfigFlags.WINDOW_RESIZABLE));
     Window(cast(s32)window_rect.width, cast(s32)window_rect.height, "raylib [core] example - basic window [Jai]");
     SetTargetFPS(60);
 
