@@ -369,9 +369,7 @@ fit_bounds :: (cm: *Mapper_Constraint, min_x: float32, max_x: float32, min_y: fl
 
 ticks_linear :: (min_x: float32, max_x: float32, base: float32 = 10.0, exponent_shift: float32 = 0.0) -> [..]float32 {
     range := max_x - min_x;
-
-    exponent := Math.log(range)/Math.log(base);
-    dx := cast(float32)Math.pow(base, Math.floor(exponent + exponent_shift));
+    dx, exp := round_to_base(range);
 
     if dx > 0.5 * range then dx /= base;
 
@@ -523,7 +521,7 @@ draw :: (using ax: CartesianAxis2D) {
             mi := map_inv(y_mapper, y       );
             ma := map_inv(y_mapper, y+height);
         }
-        ticks := ticks_linear(mi, ma, 10.0, exponent_shift);
+        ticks := ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
         defer array_free(ticks);
 
         if ticks.count >= 2 {
@@ -572,8 +570,8 @@ draw :: (using ax: CartesianAxis2D) {
     }
 
     if show_grid {
-        draw_gridlines(true , -0.5, Color.{ 130, 130, 130, 125 }, 1.5);
-        draw_gridlines(false, -0.5, Color.{ 130, 130, 130, 125 }, 1.5);
+        draw_gridlines(true , 0.0, Color.{ 130, 130, 130, 125 }, 1.5);
+        draw_gridlines(false, 0.0, Color.{ 130, 130, 130, 125 }, 1.5);
     }
 
     if show_zero_lines {
