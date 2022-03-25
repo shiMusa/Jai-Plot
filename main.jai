@@ -68,10 +68,14 @@ main :: () {
     ax_id := add_axis(axis);
     plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
     plot2d(multi(line(RAYWHITE, 6.0), line(BLUE)), x, y);
-    plot2d(multi(symbols(color=RAYWHITE, size=6.0), symbols()), x, z);
+    plot2d(multi(symbols(color=RAYWHITE, size=6.0), symbols(.X), symbols(size=3.0)), x, z);
 
     plot2d(line(SKYBLUE, 4.0), cx, cy);
-    plot2d(multi(symbols(color=SKYBLUE, size=8.0), symbols(color=GOLD, size=5.0)), vx, vy);
+    plot2d(multi(
+        symbols(.SQUARE, color=RAYWHITE, size=8.0), 
+        symbols(.SQUARE, color=SKYBLUE, size=6.0), 
+        symbols(.PLUS, color=GOLD, size=8.0)
+    ), vx, vy);
     // plot_render();
 
 

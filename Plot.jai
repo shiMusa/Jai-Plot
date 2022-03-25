@@ -71,16 +71,29 @@ line :: (color: Color = RED, thickness: float32 = 2.0) -> *Style2D_Line {
 SYMBOL_SIZE :: 128;
 Symbols :: enum u8 {
     CIRCLE :: 0;
+    SQUARE :: 1;
+    PLUS   :: 2;
+    X      :: 3;
 }
-symbol_render_textures : [1]RenderTexture2D;
+symbol_render_textures : [4]RenderTexture2D;
 init_symbol_texture :: () {
     for *symbol_render_textures {
         tex := LoadRenderTexture(SYMBOL_SIZE,SYMBOL_SIZE);
         TextureMode(tex, #code {
             ClearBackground(Color.{255,255,255,0});
             if cast(Symbols)it_index == {
-                case Symbols.CIRCLE;
+                case .CIRCLE;
                     DrawCircleV(0.5*vec2(SYMBOL_SIZE+0.5, SYMBOL_SIZE+0.5), SYMBOL_SIZE/2, WHITE);
+                case .SQUARE;
+                    DrawRectangle(0, 0, SYMBOL_SIZE, SYMBOL_SIZE, WHITE);
+                case .PLUS;
+                    half_linewidth := SYMBOL_SIZE * 1.0 / 5.0 * 0.5;
+                    mid := 0.5 * SYMBOL_SIZE;
+                    DrawRectangleV(vec2(mid-half_linewidth, 0), vec2(2.0*half_linewidth, SYMBOL_SIZE), WHITE);
+                    DrawRectangleV(vec2(0, mid-half_linewidth), vec2(SYMBOL_SIZE, 2.0*half_linewidth), WHITE);
+                case .X;
+                    DrawLineEx(vec2(), SYMBOL_SIZE*vec2(1.0,1.0), 0.3*SYMBOL_SIZE, WHITE);
+                    DrawLineEx(SYMBOL_SIZE*vec2(0.0,1.0), SYMBOL_SIZE*vec2(1.0,0.0), 0.3*SYMBOL_SIZE, WHITE);
             }
         });
         <<it = tex;
@@ -97,7 +110,7 @@ symbols :: (symbol := Symbols.CIRCLE, color := RED, size: float32 = 4.0, symbol_
     res.type = .SYMBOLS;
     res.color = color;
     res.size = size;
-    res.symbol = .CIRCLE;
+    res.symbol = symbol;
     return res;
 }
 
@@ -198,6 +211,7 @@ draw :: (data: Data2D) {
                 symbolstyle := cast(*Style2D_Symbols)s;
                 for data.v {
                     tex := symbol_render_textures[symbolstyle.symbol].texture;
+                    // print("symbolstyle.symbol = %, tex = %\n", symbolstyle.symbol, tex);
                     s := symbolstyle.size;
                     DrawTextureEx( tex, it - vec2(s,s), 0.0, s/(0.5*SYMBOL_SIZE), symbolstyle.color);
                     // DrawCircleV(it, symbolstyle.size, symbolstyle.color);
