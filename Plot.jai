@@ -621,7 +621,12 @@ Plot :: struct {
 _plot : Plot;
 mouse: Mouse;
 
-plot :: () {
+plot :: (msaa : bool = true, highdpi: bool = false) {
+    flags := ConfigFlags.WINDOW_RESIZABLE;
+    if highdpi then flags |= ConfigFlags.WINDOW_HIGHDPI;
+    if msaa    then flags |= ConfigFlags.MSAA_4X_HINT;
+    SetConfigFlags(xx flags);
+
     _plot.axes = NewResizableArray(0, *Axis);
     _plot.thread = New(Thread);
     thread_init(_plot.thread, plot_render);
@@ -629,9 +634,6 @@ plot :: () {
 }
 
 plot_render :: (_thread: *Thread = null) -> s64 {
-    // SetConfigFlags(xx (ConfigFlags.MSAA_4X_HINT | ConfigFlags.WINDOW_HIGHDPI | ConfigFlags.WINDOW_RESIZABLE));
-    SetConfigFlags(xx (ConfigFlags.MSAA_4X_HINT | ConfigFlags.WINDOW_RESIZABLE));
-    // SetConfigFlags(xx (ConfigFlags.WINDOW_RESIZABLE));
     Window(cast(s32)window_rect.width, cast(s32)window_rect.height, "raylib [core] example - basic window [Jai]");
     SetTargetFPS(60);
 

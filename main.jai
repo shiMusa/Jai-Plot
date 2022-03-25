@@ -59,7 +59,7 @@ main :: () {
 
 
 
-    plot();
+    plot(highdpi=true);
     // x_mapper := mapper_constraint(mapper_linear(), min_x = -10.0, max_x = 10.0);
     // y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
     x_mapper := mapper_constraint(mapper_linear(), min_x = -5.0, max_x = 5.0, min_y = 0.0, max_y = 1000.0);
@@ -71,8 +71,8 @@ main :: () {
     // set_scale(*axis.y_mapper, scale = 100.0);
     ax_id := add_axis(axis);
     plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
+    plot2d(multi(line(RAYWHITE, 6.0), line(BLUE)), x, y);
     plot2d(multi(symbols(RAYWHITE, 6.0), symbols()), x, z);
-    plot2d(line(BLUE), x, y);
 
     plot2d(line(SKYBLUE, 4.0), cx, cy);
     plot2d(multi(symbols(SKYBLUE, 8.0), symbols(GOLD, 5.0)), vx, vy);
