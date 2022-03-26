@@ -20,23 +20,6 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding: Vector4) {
 
 
 
-Mouse_State :: enum u8 {
-    FREE;
-    DRAGGING;
-}
-
-Mouse :: struct {
-    x, y, _x, _y: s32 = 0;
-    state: Mouse_State = .FREE;
-    active_axis: *Axis = null;
-}
-
-
-
-
-
-
-
 //  ######  ######## ##    ## ##       ########     #######  ########
 // ##    ##    ##     ##  ##  ##       ##          ##     ## ##     ##
 // ##          ##      ####   ##       ##                 ## ##     ##
@@ -304,6 +287,16 @@ map_dx :: (m: *Mapper, dx: float32) -> float32 {
             return map_dx(cm, dx);
     }
 }
+fit :: (m: *Mapper, x: float32, y: float32) {
+    if m.type == {
+        case .LINEAR;
+            lm := cast(*Mapper_Linear)m;
+            fit(lm, x, y);
+        case .CONSTRAINT;
+            cm := cast(*Mapper_Constraint)m;
+            fit(cm, x, y);
+    }
+}
 fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
     if m.type ==  {
         case .LINEAR;
@@ -342,6 +335,10 @@ map_inv :: inline (using lm: *Mapper_Linear, y: float32) -> float32 {
 }
 map_dx :: inline (using lm: *Mapper_Linear, dx: float32) -> float32 {
     return dydx * dx;
+}
+fit :: inline (lm: *Mapper_Linear, x: float32, y: float32) {
+    yt := map(lm, x);
+    lm.y0 += y-yt;
 }
 fit_bounds :: (using lm: *Mapper_Linear, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
     dydx = (max_y-min_y)/(max_x-min_x);
@@ -388,6 +385,15 @@ map_inv :: inline (using cm: *Mapper_Constraint, y: float32) -> float32 {
 }
 map_dx :: inline (using cm: *Mapper_Constraint, dx: float32) -> float32 {
     return map_dx(inner, dx);
+}
+fit :: inline (cm: *Mapper_Constraint, x: float32, y: float32) {
+    cm.fixed_min_x = true;
+    cm.fixed_max_x = true;
+    cm.fixed_min_y = true;
+    cm.fixed_max_y = true;
+    fit(cm.inner, x, y);
+    cm.min_x = map_inv(cm.inner, cm.min_y);
+    cm.max_x = map_inv(cm.inner, cm.max_y);
 }
 fit_bounds :: (cm: *Mapper_Constraint, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
     mi_x := ifx cm.fixed_min_x then cm.min_x else min_x;
@@ -643,6 +649,88 @@ draw :: (using ax: CartesianAxis2D) {
 
 
 
+// ##     ##  #######  ##     ##  ######  ########
+// ###   ### ##     ## ##     ## ##    ## ##
+// #### #### ##     ## ##     ## ##       ##
+// ## ### ## ##     ## ##     ##  ######  ######
+// ##     ## ##     ## ##     ##       ## ##
+// ##     ## ##     ## ##     ## ##    ## ##
+// ##     ##  #######   #######   ######  ########
+
+
+
+Mouse_State_Types :: enum u8 {
+    FREE;
+    DRAGGING;
+}
+Mouse_State :: struct {
+    type: Mouse_State_Types = .FREE;
+    x: s32 = 0;
+    y: s32 = 0;
+}
+
+update :: (mouse: *Mouse_State) {
+    mouse.x = GetMouseX();
+    mouse.y = GetMouseY();
+
+    if mouse.type == {
+        case .FREE;
+            mf := cast(*Mouse_State_Free)mouse;
+            update(mf);
+        case .DRAGGING;
+            md := cast(*Mouse_State_Dragging)mouse;
+            update(md);
+    }
+}
+
+Mouse_State_Free :: struct {
+    using mouse_state: Mouse_State;
+}
+mouse_free :: () -> *Mouse_State_Free {
+    res := New(Mouse_State_Free);
+    res.type = .FREE;
+    res.x = GetMouseX();
+    res.y = GetMouseY();
+    return res;
+}
+update :: (using mouse: *Mouse_State_Free) {}
+
+Mouse_State_Dragging :: struct {
+    using mouse_state: Mouse_State;
+    old_x: float32 = 0.0;
+    old_y: float32 = 0.0;
+    axis: *CartesianAxis2D;
+}
+mouse_dragging :: (axis: *CartesianAxis2D) -> *Mouse_State_Dragging {
+    res := New(Mouse_State_Dragging);
+    res.type = .DRAGGING;
+    res.x = GetMouseX();
+    res.y = GetMouseY();
+    res.axis = axis;
+
+    mx := ifx axis.x_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)axis.x_mapper).inner else axis.x_mapper;
+    my := ifx axis.y_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)axis.y_mapper).inner else axis.y_mapper;
+    res.old_x = map_inv(mx, cast(float32)res.x);
+    res.old_y = map_inv(my, cast(float32)res.y);
+    
+    // replace the axis mappers with fully constraint ones for dragging
+    axis.x_mapper = mapper_constraint(mx, map_inv(mx, axis.x), map_inv(mx, axis.x+axis.width ), axis.x, axis.x+axis.width );
+    axis.y_mapper = mapper_constraint(my, map_inv(my, axis.y), map_inv(my, axis.y+axis.height), axis.y, axis.y+axis.height);
+    
+    return res;
+}
+update :: (using mouse: *Mouse_State_Dragging) {
+    mx := cast(*Mapper_Constraint)axis.x_mapper;
+    my := cast(*Mapper_Constraint)axis.y_mapper;
+
+    fit(mx, old_x, cast(float32)x);
+    fit(my, old_y, cast(float32)y);
+}
+mouse_stop_dragging :: (using mouse: *Mouse_State_Dragging) -> *Mouse_State_Free {
+    m := mouse;
+    defer free(m);
+    return mouse_free();
+}
 
 
 
@@ -662,7 +750,6 @@ Plot :: struct {
 }
 
 _plot : Plot;
-mouse: Mouse;
 
 plot :: (msaa : bool = true, highdpi: bool = false) {
     flags := ConfigFlags.WINDOW_RESIZABLE;
@@ -684,9 +771,9 @@ plot_render :: (_thread: *Thread = null) -> s64 {
     Window(cast(s32)window_rect.width, cast(s32)window_rect.height, "raylib [core] example - basic window [Jai]");
     SetTargetFPS(60);
 
-    camera := camera2d();
-
     init_symbol_texture();
+    camera := camera2d();
+    mouse := cast(*Mouse_State)mouse_free();
 
     _plot.running = true;
 
@@ -695,34 +782,26 @@ plot_render :: (_thread: *Thread = null) -> s64 {
         window_rect.width  = cast(float)GetScreenWidth();
         window_rect.height = cast(float)GetScreenHeight();
 
-        // if IsMouseButtonDown(0) && mouse.state == .FREE {
-        //     print("dragging\n");
-        //     mouse.state = .DRAGGING;
-        //     mouse._x = GetMouseX();
-        //     mouse._y = GetMouseY();
-        //     for _plot.axes {
-        //         if CheckCollisionPointRec(vec2(cast(float32)mouse._x, cast(float32)mouse._y), it.rect) {
-        //             mouse.active_axis = it;
-        //         }
-        //     }
-        // }
-        // if !IsMouseButtonDown(0) && mouse.state == .DRAGGING {
-        //     print("free\n");
-        //     mouse.state = .FREE;
-        //     print("dx = %\n", mouse.x-mouse._x);
-        //     print("dy = %\n", mouse.y-mouse._y);
-        //     if mouse.active_axis.axis_type == {
-        //         case .CARTESIAN_2D;
-        //             ax := cast(*CartesianAxis2D)mouse.active_axis;
-        //             ax.x_mapper.to_min += cast(float32)(mouse.x-mouse._x);
-        //             ax.x_mapper.to_max += cast(float32)(mouse.x-mouse._x);
-        //             ax.y_mapper.to_min += cast(float32)(mouse.y-mouse._y);
-        //             ax.y_mapper.to_max += cast(float32)(mouse.y-mouse._y);
-        //             print("mouse drag assigned\n");
-        //     }
-        // }
-        // mouse.x = GetMouseX();
-        // mouse.y = GetMouseY();
+        if IsMouseButtonDown(0) && mouse.type == .FREE {
+            print("dragging\n");
+            // free(mouse);
+            x := cast(float32)GetMouseX();
+            y := cast(float32)GetMouseY();
+
+            for _plot.axes {
+                if CheckCollisionPointRec(vec2(x, y), it.rect) && it.axis_type == .CARTESIAN_2D {
+                    ca := cast(*CartesianAxis2D)it;
+                    mouse = mouse_dragging(ca);
+                }
+            }
+        }
+        if !IsMouseButtonDown(0) && mouse.type == .DRAGGING {
+            print("free\n");
+            md := cast(*Mouse_State_Dragging)mouse;
+            mouse = cast(*Mouse_State)mouse_stop_dragging(md);
+        }
+
+        update(mouse);
 
 
         Drawing();

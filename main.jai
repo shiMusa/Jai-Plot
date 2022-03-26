@@ -56,15 +56,11 @@ cy : [361]float32;
 main :: () {
 
     plot(highdpi=true);
-    // x_mapper := mapper_constraint(mapper_linear(), min_x = -10.0, max_x = 10.0);
-    // y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
-    x_mapper := mapper_constraint(mapper_linear(), min_x = -5.0, max_x = 5.0, min_y = 0.0, max_y = 1000.0);
-    y_mapper := mapper_constraint(mapper_linear(), min_x = -5.0, max_x = 5.0, min_y = 0.0, max_y = 1000.0);
+    x_mapper := mapper_constraint(mapper_linear(), min_x = -10.0, max_x = 10.0);
+    y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
+    // x_mapper := mapper_constraint(mapper_linear(), min_x = -5.0, max_x = 5.0, min_y = 0.0, max_y = 1000.0);
+    // y_mapper := mapper_constraint(mapper_linear(), min_x = -5.0, max_x = 5.0, min_y = 0.0, max_y = 1000.0);
     axis := cartesian_axis_2d(x_mapper, y_mapper);
-    // set_min_max(*axis.x_mapper, -10.0, 10.0);
-    // set_min_max(*axis.y_mapper, -2.0, 2.0);
-    // set_scale(*axis.x_mapper, scale = 100.0);
-    // set_scale(*axis.y_mapper, scale = 100.0);
     ax_id := add_axis(axis);
     plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
     plot2d(multi(line(RAYWHITE, 6.0), line(BLUE)), x, y);
