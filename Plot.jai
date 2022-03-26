@@ -555,6 +555,7 @@ CartesianAxis2D :: struct {
 
     original_x_mapper: *Mapper;
     original_y_mapper: *Mapper;
+    is_original : bool = true;
 
     x_mapper: *Mapper;
     y_mapper: *Mapper;
@@ -580,6 +581,8 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *Ca
     return res;
 }
 reset :: (axis: *CartesianAxis2D) {
+    if axis.is_original then return;
+
     xm := axis.x_mapper;
     ym := axis.y_mapper;
     defer {
@@ -588,8 +591,56 @@ reset :: (axis: *CartesianAxis2D) {
     }
     axis.x_mapper = axis.original_x_mapper;
     axis.y_mapper = axis.original_y_mapper;
+    axis.is_original = true;
 }
 
+
+equal_scaling :: (axis: *CartesianAxis2D) {
+    if !axis.is_original {
+        xm := axis.x_mapper;
+        ym := axis.y_mapper;
+        defer {
+            free(xm);
+            free(ym);
+        }
+    }
+    axis.is_original = false;
+
+    dx := map_inv(axis.x_mapper, axis.x+axis.width ) - map_inv(axis.x_mapper, axis.x);
+    dy := map_inv(axis.y_mapper, axis.y+axis.height) - map_inv(axis.y_mapper, axis.y);
+    x0 := map_inv(axis.x_mapper, axis.x + 0.5*axis.width );
+    y0 := map_inv(axis.y_mapper, axis.y + 0.5*axis.height);
+
+    xmin, xmax, ymin, ymax : float32;
+    if dx > dy {
+        xmin = map_inv(axis.x_mapper, axis.x);
+        xmax = map_inv(axis.x_mapper, axis.x + axis.width);
+        dxdp := (xmax-xmin)/axis.width;
+        ymin = -dxdp*axis.height*0.5 + y0;
+        ymax =  dxdp*axis.height*0.5 + y0;
+    } else {
+        ymin = map_inv(axis.y_mapper, axis.y);
+        ymax = map_inv(axis.y_mapper, axis.y + axis.height);
+        dydp := (ymax-ymin)/axis.height;
+        xmin = -dydp*axis.width*0.5 + x0;
+        xmax =  dydp*axis.width*0.5 + x0;
+    }
+
+    axis.x_mapper = mapper_constraint(
+        mapper_linear(), 
+        xmin, 
+        xmax, 
+        axis.x, 
+        axis.x + axis.width
+    );
+    axis.y_mapper = mapper_constraint(
+        mapper_linear(), 
+        ymin, 
+        ymax, 
+        axis.y, 
+        axis.y + axis.height
+    );
+}
 
 fit_data :: (using ax: CartesianAxis2D) {
     if datasets.count == 0 then return;
@@ -815,6 +866,7 @@ mouse_dragging :: (axis: *CartesianAxis2D) -> *Mouse_State_Dragging {
     axis.x_mapper = mapper_constraint(mx, map_inv(mx, axis.x), map_inv(mx, axis.x+axis.width ), axis.x, axis.x+axis.width );
     axis.y_mapper = mapper_constraint(my, map_inv(my, axis.y), map_inv(my, axis.y+axis.height), axis.y, axis.y+axis.height);
     
+    axis.is_original = false;
     return res;
 }
 update :: (using mouse: *Mouse_State_Dragging) {
@@ -899,6 +951,14 @@ plot_render :: (_thread: *Thread = null) -> s64 {
         if gui_button(Rectangle.{50.0,15.0,50.0,20.0}, "reset") {
             print("reset\n");
             reset(_plot.axes[0]);
+        }
+
+        if gui_button(Rectangle.{50.0+50.0+20.0, 15.0, 50.0, 20.0}, "1:1") {
+            print("1:1\n");
+            if _plot.axes[0].axis_type == .CARTESIAN_2D {
+                ax := cast(*CartesianAxis2D)_plot.axes[0];
+                equal_scaling(ax);
+            }
         }
     }
 
