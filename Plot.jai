@@ -658,6 +658,7 @@ draw :: (using ax: CartesianAxis2D) {
 // ##     ##  #######   #######   ######  ########
 
 
+_mouse : *Mouse_State;
 
 Mouse_State_Types :: enum u8 {
     FREE;
@@ -669,16 +670,35 @@ Mouse_State :: struct {
     y: s32 = 0;
 }
 
-update :: (mouse: *Mouse_State) {
-    mouse.x = GetMouseX();
-    mouse.y = GetMouseY();
+update_mouse :: () {
+    if IsMouseButtonDown(0) && _mouse.type == .FREE {
+        print("dragging\n");
+        // free(_mouse);
+        x := cast(float32)GetMouseX();
+        y := cast(float32)GetMouseY();
 
-    if mouse.type == {
+        for _plot.axes {
+            if CheckCollisionPointRec(vec2(x, y), it.rect) && it.axis_type == .CARTESIAN_2D {
+                ca := cast(*CartesianAxis2D)it;
+                _mouse = mouse_dragging(ca);
+            }
+        }
+    }
+    if !IsMouseButtonDown(0) && _mouse.type == .DRAGGING {
+        print("free\n");
+        md := cast(*Mouse_State_Dragging)_mouse;
+        _mouse = cast(*Mouse_State)mouse_stop_dragging(md);
+    }
+
+    _mouse.x = GetMouseX();
+    _mouse.y = GetMouseY();
+
+    if _mouse.type == {
         case .FREE;
-            mf := cast(*Mouse_State_Free)mouse;
+            mf := cast(*Mouse_State_Free)_mouse;
             update(mf);
         case .DRAGGING;
-            md := cast(*Mouse_State_Dragging)mouse;
+            md := cast(*Mouse_State_Dragging)_mouse;
             update(md);
     }
 }
@@ -773,36 +793,15 @@ plot_render :: (_thread: *Thread = null) -> s64 {
 
     init_symbol_texture();
     camera := camera2d();
-    mouse := cast(*Mouse_State)mouse_free();
+    _mouse = cast(*Mouse_State)mouse_free();
 
     _plot.running = true;
 
     while !WindowShouldClose() {
-
         window_rect.width  = cast(float)GetScreenWidth();
         window_rect.height = cast(float)GetScreenHeight();
 
-        if IsMouseButtonDown(0) && mouse.type == .FREE {
-            print("dragging\n");
-            // free(mouse);
-            x := cast(float32)GetMouseX();
-            y := cast(float32)GetMouseY();
-
-            for _plot.axes {
-                if CheckCollisionPointRec(vec2(x, y), it.rect) && it.axis_type == .CARTESIAN_2D {
-                    ca := cast(*CartesianAxis2D)it;
-                    mouse = mouse_dragging(ca);
-                }
-            }
-        }
-        if !IsMouseButtonDown(0) && mouse.type == .DRAGGING {
-            print("free\n");
-            md := cast(*Mouse_State_Dragging)mouse;
-            mouse = cast(*Mouse_State)mouse_stop_dragging(md);
-        }
-
-        update(mouse);
-
+        update_mouse();
 
         Drawing();
         ClearBackground(RAYWHITE);
@@ -814,9 +813,6 @@ plot_render :: (_thread: *Thread = null) -> s64 {
                     ax := cast(*CartesianAxis2D)it;
                     fit_into_rectangle(ax, window_rect, vec4(50.0,50.0,50.0,50.0));
                     fit_data(ax);
-                    // shift := ifx mouse.state == .DRAGGING && mouse.active_axis == ax then 
-                    //     vec2(cast(float32)(mouse.x-mouse._x), cast(float32)(mouse.y-mouse._y)) 
-                    // else vec2();
                     map(ax);
                     draw(ax);
             }
