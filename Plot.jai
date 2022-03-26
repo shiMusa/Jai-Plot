@@ -17,6 +17,42 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding: Vector4) {
 }
 
 
+//  ######   ##     ## ####
+// ##    ##  ##     ##  ##
+// ##        ##     ##  ##
+// ##   #### ##     ##  ##
+// ##    ##  ##     ##  ##
+// ##    ##  ##     ##  ##
+//  ######    #######  ####
+
+
+Gui_Type :: enum u8 {
+    FIT;
+    VERTICAL_STACK;
+}
+Gui :: struct {
+    using rectangle: Rectangle;
+    guy_type: Gui_Type;
+}
+gui :: (rect: Rectangle) -> *Gui {
+    res: New(Gui);
+    res.rectangle = rect;
+    res.type = .FIT;
+    return res;
+}
+
+Split_Type :: enum u8 {
+    FIXED;
+    RELATIVE;
+}
+Gui_Vertical_Stack {
+    using gui: Gui;
+    split_value: float32;
+    split_type: 
+}
+
+
+
 
 
 
@@ -310,6 +346,11 @@ fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y
 
 
 
+
+
+
+
+
 Mapper_Linear :: struct {
     using _m: Mapper;
     y0, dydx : float32;
@@ -345,6 +386,11 @@ fit_bounds :: (using lm: *Mapper_Linear, min_x: float32, max_x: float32, min_y: 
     // dydx * max_x + y0 = max_y => y0 = max_y - dydx * max_x
     y0 = max_y - dydx * max_x;
 }
+
+
+
+
+
 
 
 
@@ -788,7 +834,7 @@ plot :: (msaa : bool = true, highdpi: bool = false) {
 }
 
 plot_render :: (_thread: *Thread = null) -> s64 {
-    Window(cast(s32)window_rect.width, cast(s32)window_rect.height, "raylib [core] example - basic window [Jai]");
+    Window(cast(s32)window_rect.width, cast(s32)window_rect.height, "Jai Plot");
     SetTargetFPS(60);
 
     init_symbol_texture();
