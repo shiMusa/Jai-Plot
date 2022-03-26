@@ -44,6 +44,13 @@ DrawText :: (text: string, posx: s32, posy: s32, fontSize: s32, color: Color) {
     DrawText(cstr, posx, posy, fontSize, color);
 }
 
+MeasureText :: (text: string, font_size: s32) -> s32 {
+    cstr := to_c_string(text);
+    defer free(cstr);
+
+    return MeasureText(cstr, font_size);
+}
+
 DrawLineStrip :: inline (points: []Vector2, color: Color) {
     DrawLineStrip(points.data, cast(s32)points.count, color);
 }
@@ -135,6 +142,7 @@ operator - :: (a: Vector4, b: Vector4) -> Vector4 {
     res.w = a.w - b.w;
     return res;
 }
+
 operator + :: (a: Color, b: Color) -> Color {
     res : Color = ---;
     res.r = a.r + b.r;
@@ -151,6 +159,23 @@ operator - :: (a: Color, b: Color) -> Color {
     res.a = a.a - b.a;
     return res;
 }
+operator * :: (a: Color, b: float) -> Color #symmetric {
+    res : Color = ---;
+    res.r = cast(u8)(a.r * b);
+    res.g = cast(u8)(a.g * b);
+    res.b = cast(u8)(a.b * b);
+    res.a = cast(u8)(a.a * b);
+    return res;
+}
+operator / :: (a: Color, b: float) -> Color {
+    res : Color = ---;
+    res.r = cast(u8)(a.r / b);
+    res.g = cast(u8)(a.g / b);
+    res.b = cast(u8)(a.b / b);
+    res.a = cast(u8)(a.a / b);
+    return res;
+}
+
 operator * :: (a: Vector2, b: float) -> Vector2 #symmetric {
     res : Vector2 = ---;
     res.x = a.x * b;

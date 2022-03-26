@@ -26,32 +26,39 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding: Vector4) {
 //  ######    #######  ####
 
 
-Gui_Type :: enum u8 {
-    FIT;
-    VERTICAL_STACK;
-}
-Gui :: struct {
-    using rectangle: Rectangle;
-    guy_type: Gui_Type;
-}
-gui :: (rect: Rectangle) -> *Gui {
-    res: New(Gui);
-    res.rectangle = rect;
-    res.type = .FIT;
-    return res;
-}
 
-Split_Type :: enum u8 {
-    FIXED;
-    RELATIVE;
-}
-Gui_Vertical_Stack {
-    using gui: Gui;
-    split_value: float32;
-    split_type: 
-}
+gui_button :: (
+    rect: Rectangle, 
+    text := "", 
+    font_size : s32 = 12, 
+    line_color := GREY, 
+    fill_color := RAYWHITE
+) -> bool {
+    m := vec2(cast(float32)_mouse.x, cast(float32)_mouse.y);
+    over := CheckCollisionPointRec(m, rect);
 
+    text_width := MeasureText(text, font_size);
 
+    tx := cast(s32)(rect.width  * 0.5 + rect.x - 0.5 * text_width);
+    ty := cast(s32)(rect.height * 0.5 + rect.y - 0.5 * font_size );
+
+    if IsMouseButtonPressed(0) && over {
+        DrawRectangleRec(rect, fill_color * 0.5);
+        DrawRectangleLinesEx(rect, 2.0, line_color);
+        DrawText(text, tx, ty, font_size, BLACK);
+        return true;
+    } else if over {
+        DrawRectangleRec(rect, fill_color);
+        DrawRectangleLinesEx(rect, 2.0, RED);
+        DrawText(text, tx, ty, font_size, BLACK);
+        return false;
+    } else {
+        DrawRectangleRec(rect, fill_color);
+        DrawRectangleLinesEx(rect, 2.0, line_color);
+        DrawText(text, tx, ty, font_size, BLACK);
+        return false;
+    }
+}
 
 
 
@@ -493,6 +500,14 @@ Axis :: struct {
     datasets: [..]Data2D;
 }
 
+reset :: (ax: *Axis) {
+    if ax.axis_type == {
+        case .CARTESIAN_2D;
+            ca := cast(*CartesianAxis2D)ax;
+            reset(ca);
+    }
+}
+
 bounds_x :: (using ax: *Axis) -> float32, float32 {
     assert(datasets.count > 0);
     _min, _max := bounds_x(datasets[0]);
@@ -538,6 +553,9 @@ bounds_extra :: (using ax: *Axis, index: int) -> float32, float32 {
 CartesianAxis2D :: struct {
     using axis: Axis;
 
+    original_x_mapper: *Mapper;
+    original_y_mapper: *Mapper;
+
     x_mapper: *Mapper;
     y_mapper: *Mapper;
 
@@ -555,7 +573,21 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *Ca
     
     res.x_mapper = ifx x_mapper then x_mapper else mapper_linear();
     res.y_mapper = ifx y_mapper then y_mapper else mapper_linear();
+
+    res.original_x_mapper = res.x_mapper;
+    res.original_y_mapper = res.y_mapper;
+
     return res;
+}
+reset :: (axis: *CartesianAxis2D) {
+    xm := axis.x_mapper;
+    ym := axis.y_mapper;
+    defer {
+        free(xm);
+        free(ym);
+    }
+    axis.x_mapper = axis.original_x_mapper;
+    axis.y_mapper = axis.original_y_mapper;
 }
 
 
@@ -862,6 +894,11 @@ plot_render :: (_thread: *Thread = null) -> s64 {
                     map(ax);
                     draw(ax);
             }
+        }
+
+        if gui_button(Rectangle.{50.0,15.0,50.0,20.0}, "reset") {
+            print("reset\n");
+            reset(_plot.axes[0]);
         }
     }
 
