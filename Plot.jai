@@ -294,6 +294,7 @@ draw :: (data: Data2D) {
 Mapper_Type :: enum u8 {
     LINEAR;
     CONSTRAINT;
+    LOGARITHMIC;
 }
 
 Mapper :: struct {
@@ -308,6 +309,9 @@ map :: (m: *Mapper, x: float32) -> float32 {
         case .CONSTRAINT;
             cm := cast(*Mapper_Constraint)m;
             return map(cm, x);
+        case .LOGARITHMIC;
+            ml := cast(*Mapper_Logarithmic)m;
+            return map(ml, x);
     }
 }
 map_inv :: (m: *Mapper, y: float32) -> float32 {
@@ -318,16 +322,9 @@ map_inv :: (m: *Mapper, y: float32) -> float32 {
         case .CONSTRAINT;
             cm := cast(*Mapper_Constraint)m;
             return map_inv(cm, y);
-    }
-}
-map_dx :: (m: *Mapper, dx: float32) -> float32 {
-    if m.type == {
-        case .LINEAR;
-            lm := cast(*Mapper_Linear)m;
-            return map_dx(lm, dx);
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)m;
-            return map_dx(cm, dx);
+        case .LOGARITHMIC;  
+            ml := cast(*Mapper_Logarithmic)m;
+            return map_inv(ml, y);
     }
 }
 fit :: (m: *Mapper, x: float32, y: float32) {
@@ -338,6 +335,9 @@ fit :: (m: *Mapper, x: float32, y: float32) {
         case .CONSTRAINT;
             cm := cast(*Mapper_Constraint)m;
             fit(cm, x, y);
+        case .LOGARITHMIC;
+            ml := cast(*Mapper_Logarithmic)m;
+            fit(ml, x, y);
     }
 }
 fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
@@ -348,6 +348,9 @@ fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y
         case .CONSTRAINT;
             cm := cast(*Mapper_Constraint)m;
             fit_bounds(cm, min_x, max_x, min_y, max_y);
+        case .LOGARITHMIC;
+            ml := cast(*Mapper_Logarithmic)m;
+            fit_bounds(ml, min_x, max_x, min_y, max_y);
     }
 }
 
@@ -381,9 +384,6 @@ map :: inline (using lm: *Mapper_Linear, x: float32) -> float32 {
 map_inv :: inline (using lm: *Mapper_Linear, y: float32) -> float32 {
     return (y - y0)/dydx;
 }
-map_dx :: inline (using lm: *Mapper_Linear, dx: float32) -> float32 {
-    return dydx * dx;
-}
 fit :: inline (lm: *Mapper_Linear, x: float32, y: float32) {
     yt := map(lm, x);
     lm.y0 += y-yt;
@@ -397,6 +397,39 @@ fit_bounds :: (using lm: *Mapper_Linear, min_x: float32, max_x: float32, min_y: 
 
 
 
+Mapper_Logarithmic :: struct {
+    using mapper: Mapper;
+    mapper_linear: *Mapper_Linear;
+    base: float32;
+    invlogbase: float32;
+}
+mapper_logarithmic :: (base: float32 = 10.0) -> *Mapper_Logarithmic {
+    res := New(Mapper_Logarithmic);
+    res.type = .LOGARITHMIC;
+    res.mapper_linear = mapper_linear();
+    res.base = base;
+    res.invlogbase = 1.0/Math.log(base);
+    return res;
+}
+map :: inline (using ml: *Mapper_Logarithmic, x: float32) -> float32 {
+    // if x <= 0.0 then return Math.FLOAT32_MIN;
+    return map(mapper_linear, Math.log(x) * invlogbase);
+}
+map_inv :: inline (using ml: *Mapper_Logarithmic, y: float32) -> float32 {
+    return Math.pow(base, map_inv(mapper_linear, y));
+}
+fit :: (using ml: *Mapper_Logarithmic, x: float32, y: float32) {
+    fit(mapper_linear, Math.log(x)*invlogbase, y);
+}
+fit_bounds :: (using ml: *Mapper_Logarithmic, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
+    fit_bounds(
+        mapper_linear, 
+        Math.log(min_x)*invlogbase,
+        Math.log(max_x)*invlogbase,
+        min_y, max_y
+    );
+}
+
 
 
 
@@ -408,9 +441,6 @@ Mapper_Constraint :: struct {
 
     fixed_min_x, fixed_max_x, fixed_min_y, fixed_max_y: bool = false;
     min_x, max_x, min_y, max_y : float32;
-
-    // fixed_scale: bool = false;
-    // scale, center: float32;
 }
 mapper_constraint :: (
     inner: *Mapper, 
@@ -435,9 +465,6 @@ map :: inline (using cm: *Mapper_Constraint, x: float32) -> float32 {
 }
 map_inv :: inline (using cm: *Mapper_Constraint, y: float32) -> float32 {
     return map_inv(inner, y);
-}
-map_dx :: inline (using cm: *Mapper_Constraint, dx: float32) -> float32 {
-    return map_dx(inner, dx);
 }
 fit :: inline (cm: *Mapper_Constraint, x: float32, y: float32) {
     cm.fixed_min_x = true;
@@ -736,14 +763,6 @@ draw :: (using ax: CartesianAxis2D) {
         }
         ticks := ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
         defer array_free(ticks);
-
-        if ticks.count >= 2 {
-            #if x_axis {
-                if map_dx(x_mapper, ticks[1] - ticks[0]) < min_grid_gap_px then return;
-            } else {
-                if map_dx(y_mapper, ticks[1] - ticks[0]) < min_grid_gap_px then return;
-            }
-        }
 
         for ticks {
             #if x_axis {

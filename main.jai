@@ -6,7 +6,7 @@
 simulation :: (_thread: *Thread = null) -> s64 {
 
     for *x {
-        <<it = -10.0 + 20.0 * (cast(float32)it_index/cast(float32)(N-1));
+        <<it = 100.0 * (cast(float32)it_index/cast(float32)(N-1));
     }
 
     for i:0..361-1 {
@@ -56,7 +56,7 @@ cy : [361]float32;
 main :: () {
 
     plot(highdpi=true);
-    x_mapper := mapper_constraint(mapper_linear(), min_x = -10.0, max_x = 10.0);
+    x_mapper := mapper_constraint(mapper_logarithmic(), min_x = 0.1, max_x = 100.0);
     y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
     // x_mapper := mapper_constraint(mapper_linear(), min_x = -5.0, max_x = 5.0, min_y = 0.0, max_y = 1000.0);
     // y_mapper := mapper_constraint(mapper_linear(), min_x = -5.0, max_x = 5.0, min_y = 0.0, max_y = 1000.0);
