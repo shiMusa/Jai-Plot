@@ -507,6 +507,13 @@ reset :: (ax: *Axis) {
             reset(ca);
     }
 }
+zoom :: (ax: *Axis, wheel: float32) {
+    if ax.axis_type == {
+        case .CARTESIAN_2D;
+            ca := cast(*CartesianAxis2D)ax;
+            zoom(ca, wheel);
+    }
+}
 
 bounds_x :: (using ax: *Axis) -> float32, float32 {
     assert(datasets.count > 0);
@@ -592,6 +599,39 @@ reset :: (axis: *CartesianAxis2D) {
     axis.x_mapper = axis.original_x_mapper;
     axis.y_mapper = axis.original_y_mapper;
     axis.is_original = true;
+}
+zoom :: (axis: *CartesianAxis2D, wheel: float32) {
+    if !axis.is_original {
+        xm := axis.x_mapper;
+        ym := axis.y_mapper;
+        defer {
+            free(xm);
+            free(ym);
+        }
+    }
+    axis.is_original = false;
+
+    delta := 0.02 * wheel;
+
+    xmin := map_inv(axis.x_mapper, (_mouse.x - axis.x)               * delta + axis.x             );
+    xmax := map_inv(axis.x_mapper, (_mouse.x - (axis.x+axis.width )) * delta + axis.x+axis.width  );
+    ymin := map_inv(axis.y_mapper, (_mouse.y - axis.y)               * delta + axis.y             );
+    ymax := map_inv(axis.y_mapper, (_mouse.y - (axis.y+axis.height)) * delta + axis.y+axis.height );
+
+    axis.x_mapper = mapper_constraint(
+        mapper_linear(), 
+        xmin, 
+        xmax, 
+        axis.x, 
+        axis.x + axis.width
+    );
+    axis.y_mapper = mapper_constraint(
+        mapper_linear(), 
+        ymin, 
+        ymax, 
+        axis.y, 
+        axis.y + axis.height
+    );
 }
 
 
@@ -842,7 +882,16 @@ mouse_free :: () -> *Mouse_State_Free {
     res.y = GetMouseY();
     return res;
 }
-update :: (using mouse: *Mouse_State_Free) {}
+update :: (using mouse: *Mouse_State_Free) {
+    wheel := GetMouseWheelMove();
+    mv := vec2(cast(float32)x, cast(float32)y);
+    for _plot.axes {
+        if CheckCollisionPointRec(mv, it) && wheel != 0.0 {
+            // print("zoom %\n", wheel);
+            zoom(it, wheel);
+        }
+    }
+}
 
 Mouse_State_Dragging :: struct {
     using mouse_state: Mouse_State;
