@@ -300,7 +300,19 @@ Mapper_Type :: enum u8 {
 Mapper :: struct {
     type: Mapper_Type = .LINEAR;
 }
-
+clone :: (m: *Mapper) -> *Mapper {
+    if m.type == {
+        case .LINEAR;
+            lm := cast(*Mapper_Linear)m;
+            return cast(*Mapper)clone(lm);
+        case .CONSTRAINT;
+            cm := cast(*Mapper_Constraint)m;
+            return cast(*Mapper)clone(cm);
+        case .LOGARITHMIC;
+            ml := cast(*Mapper_Logarithmic)m;
+            return cast(*Mapper)clone(ml);
+    }
+}
 map :: (m: *Mapper, x: float32) -> float32 {
     if m.type == {
         case .LINEAR;
@@ -340,14 +352,14 @@ fit :: (m: *Mapper, x: float32, y: float32) {
             fit(ml, x, y);
     }
 }
-fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
+fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y: float32, overwrite_constraints: bool = false) {
     if m.type ==  {
         case .LINEAR;
             lm := cast(*Mapper_Linear)m;
             fit_bounds(lm, min_x, max_x, min_y, max_y);
         case .CONSTRAINT;
             cm := cast(*Mapper_Constraint)m;
-            fit_bounds(cm, min_x, max_x, min_y, max_y);
+            fit_bounds(cm, min_x, max_x, min_y, max_y, overwrite_constraints);
         case .LOGARITHMIC;
             ml := cast(*Mapper_Logarithmic)m;
             fit_bounds(ml, min_x, max_x, min_y, max_y);
@@ -364,6 +376,13 @@ fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y
 Mapper_Linear :: struct {
     using _m: Mapper;
     y0, dydx : float32;
+}
+clone :: (m: *Mapper_Linear) -> *Mapper_Linear {
+    res := New(Mapper_Linear);
+    res.type = .LINEAR;
+    res.y0 = m.y0;
+    res.dydx = m.dydx;
+    return res;
 }
 mapper_linear :: (y0: float = 0.0, dydx: float32 = 1.0) -> *Mapper_Linear {
     res := New(Mapper_Linear);
@@ -403,6 +422,14 @@ Mapper_Logarithmic :: struct {
     base: float32;
     invlogbase: float32;
 }
+clone :: (m: *Mapper_Logarithmic) -> *Mapper_Logarithmic {
+    res := New(Mapper_Logarithmic);
+    res.type = .LOGARITHMIC;
+    res.mapper_linear = clone(m.mapper_linear);
+    res.base = m.base;
+    res.invlogbase = m.invlogbase;
+    return res;
+}
 mapper_logarithmic :: (base: float32 = 10.0) -> *Mapper_Logarithmic {
     res := New(Mapper_Logarithmic);
     res.type = .LOGARITHMIC;
@@ -422,6 +449,7 @@ fit :: (using ml: *Mapper_Logarithmic, x: float32, y: float32) {
     fit(mapper_linear, Math.log(x)*invlogbase, y);
 }
 fit_bounds :: (using ml: *Mapper_Logarithmic, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
+    if min_x < 0.0 then return;
     fit_bounds(
         mapper_linear, 
         Math.log(min_x)*invlogbase,
@@ -441,6 +469,20 @@ Mapper_Constraint :: struct {
 
     fixed_min_x, fixed_max_x, fixed_min_y, fixed_max_y: bool = false;
     min_x, max_x, min_y, max_y : float32;
+}
+clone :: (m: *Mapper_Constraint) -> *Mapper_Constraint {
+    res := New(Mapper_Constraint);
+    res.type = .CONSTRAINT; 
+    res.inner = clone(m.inner);
+    res.fixed_min_x = m.fixed_min_x;
+    res.fixed_max_x = m.fixed_max_x;
+    res.fixed_min_y = m.fixed_min_y;
+    res.fixed_max_y = m.fixed_max_y;
+    res.min_x = m.min_x;
+    res.max_x = m.max_x;
+    res.min_y = m.min_y;
+    res.max_y = m.max_y;
+    return res;
 }
 mapper_constraint :: (
     inner: *Mapper, 
@@ -475,13 +517,23 @@ fit :: inline (cm: *Mapper_Constraint, x: float32, y: float32) {
     cm.min_x = map_inv(cm.inner, cm.min_y);
     cm.max_x = map_inv(cm.inner, cm.max_y);
 }
-fit_bounds :: (cm: *Mapper_Constraint, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
+fit_bounds :: (cm: *Mapper_Constraint, min_x: float32, max_x: float32, min_y: float32, max_y: float32, overwrite_constraints: bool = false) {
+    if overwrite_constraints {
+        cm.min_x = min_x;
+        cm.max_x = max_x;
+        cm.min_y = min_y;
+        cm.max_y = max_y;
+        cm.fixed_min_x = true;
+        cm.fixed_max_x = true;
+        cm.fixed_min_y = true;
+        cm.fixed_max_y = true;
+    }
     mi_x := ifx cm.fixed_min_x then cm.min_x else min_x;
     ma_x := ifx cm.fixed_max_x then cm.max_x else max_x;
     mi_y := ifx cm.fixed_min_y then cm.min_y else min_y;
     ma_y := ifx cm.fixed_max_y then cm.max_y else max_y;
 
-    fit_bounds(cm.inner, mi_x, ma_x, mi_y, ma_y);
+    fit_bounds(cm.inner, mi_x, ma_x, mi_y, ma_y, overwrite_constraints);
 }
 
 
@@ -541,6 +593,16 @@ zoom :: (ax: *Axis, wheel: float32) {
             zoom(ca, wheel);
     }
 }
+fit_data :: (ax: *Axis, overwrite_constraints: bool = false) {
+    if ax.axis_type == {
+        case .CARTESIAN_2D;
+            ca := cast(*CartesianAxis2D)ax;
+            fit_data(ca, overwrite_constraints);
+    }
+}
+
+
+
 
 bounds_x :: (using ax: *Axis) -> float32, float32 {
     assert(datasets.count > 0);
@@ -589,7 +651,6 @@ CartesianAxis2D :: struct {
 
     original_x_mapper: *Mapper;
     original_y_mapper: *Mapper;
-    is_original : bool = true;
 
     x_mapper: *Mapper;
     y_mapper: *Mapper;
@@ -609,34 +670,28 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *Ca
     res.x_mapper = ifx x_mapper then x_mapper else mapper_linear();
     res.y_mapper = ifx y_mapper then y_mapper else mapper_linear();
 
-    res.original_x_mapper = res.x_mapper;
-    res.original_y_mapper = res.y_mapper;
+    res.original_x_mapper = clone(res.x_mapper);
+    res.original_y_mapper = clone(res.y_mapper);
 
     return res;
 }
 reset :: (axis: *CartesianAxis2D) {
-    if axis.is_original then return;
-
     xm := axis.x_mapper;
     ym := axis.y_mapper;
     defer {
         free(xm);
         free(ym);
     }
-    axis.x_mapper = axis.original_x_mapper;
-    axis.y_mapper = axis.original_y_mapper;
-    axis.is_original = true;
+    axis.x_mapper = clone(axis.original_x_mapper);
+    axis.y_mapper = clone(axis.original_y_mapper);
 }
 zoom :: (axis: *CartesianAxis2D, wheel: float32) {
-    if !axis.is_original {
-        xm := axis.x_mapper;
-        ym := axis.y_mapper;
-        defer {
-            free(xm);
-            free(ym);
-        }
+    xm := axis.x_mapper;
+    ym := axis.y_mapper;
+    defer {
+        free(xm);
+        free(ym);
     }
-    axis.is_original = false;
 
     delta := 0.02 * wheel;
 
@@ -645,15 +700,58 @@ zoom :: (axis: *CartesianAxis2D, wheel: float32) {
     ymin := map_inv(axis.y_mapper, (_mouse.y - axis.y)               * delta + axis.y             );
     ymax := map_inv(axis.y_mapper, (_mouse.y - (axis.y+axis.height)) * delta + axis.y+axis.height );
 
+    new_inner_x_mapper: *Mapper;
+    new_inner_y_mapper: *Mapper;
+
+    // // ! This is really bad code......
+
+    // print("x_mapper = %\n", <<axis.x_mapper);
+    // print("y_mapper = %\n", <<axis.y_mapper);
+
+    if axis.x_mapper.type == {
+        case .LINEAR;
+            new_inner_x_mapper = mapper_linear();
+        case .LOGARITHMIC;
+            logmapper := cast(*Mapper_Logarithmic)axis.x_mapper;
+            new_inner_x_mapper = mapper_logarithmic(logmapper.base);
+        case .CONSTRAINT;
+            cm := cast(*Mapper_Constraint)axis.x_mapper;
+            if cm.inner.type == {
+                case .LINEAR;
+                    new_inner_x_mapper = mapper_linear();
+                case .LOGARITHMIC;
+                    logmapper := cast(*Mapper_Logarithmic)cm.inner;
+                    new_inner_x_mapper = mapper_logarithmic(logmapper.base);
+            }
+    }
+    if axis.y_mapper.type == {
+        case .LINEAR;
+            new_inner_y_mapper = mapper_linear();
+        case .LOGARITHMIC;
+            logmapper := cast(*Mapper_Logarithmic)axis.y_mapper;
+            new_inner_y_mapper = mapper_logarithmic(logmapper.base);
+        case .CONSTRAINT;
+            cm := cast(*Mapper_Constraint)axis.y_mapper;
+            if cm.inner.type == {
+                case .LINEAR;
+                    new_inner_y_mapper = mapper_linear();
+                case .LOGARITHMIC;
+                    logmapper := cast(*Mapper_Logarithmic)cm.inner;
+                    new_inner_y_mapper = mapper_logarithmic(logmapper.base);
+            }
+    }
+
     axis.x_mapper = mapper_constraint(
-        mapper_linear(), 
+        new_inner_x_mapper, 
+        // mapper_linear(), 
         xmin, 
         xmax, 
         axis.x, 
         axis.x + axis.width
     );
     axis.y_mapper = mapper_constraint(
-        mapper_linear(), 
+        new_inner_y_mapper, 
+        // mapper_linear(), 
         ymin, 
         ymax, 
         axis.y, 
@@ -663,15 +761,12 @@ zoom :: (axis: *CartesianAxis2D, wheel: float32) {
 
 
 equal_scaling :: (axis: *CartesianAxis2D) {
-    if !axis.is_original {
-        xm := axis.x_mapper;
-        ym := axis.y_mapper;
-        defer {
-            free(xm);
-            free(ym);
-        }
+    xm := axis.x_mapper;
+    ym := axis.y_mapper;
+    defer {
+        free(xm);
+        free(ym);
     }
-    axis.is_original = false;
 
     dx := map_inv(axis.x_mapper, axis.x+axis.width ) - map_inv(axis.x_mapper, axis.x);
     dy := map_inv(axis.y_mapper, axis.y+axis.height) - map_inv(axis.y_mapper, axis.y);
@@ -709,7 +804,7 @@ equal_scaling :: (axis: *CartesianAxis2D) {
     );
 }
 
-fit_data :: (using ax: CartesianAxis2D) {
+fit_data :: (using ax: *CartesianAxis2D, overwrite_constraints: bool = false) {
     if datasets.count == 0 then return;
 
     min_x := min(datasets[0].x);
@@ -723,10 +818,10 @@ fit_data :: (using ax: CartesianAxis2D) {
         max_y = max(max_y, max(datasets[i].y));
     }
 
-    fit_bounds(x_mapper, min_x, max_x, x, x+width);
-    fit_bounds(y_mapper, min_y, max_y, y, y+height);
+    fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
+    fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
 }
-map :: (using ax: CartesianAxis2D) {
+map :: (using ax: *CartesianAxis2D) {
     for *datasets {
         it.zero = vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
 
@@ -748,7 +843,7 @@ map :: (using ax: CartesianAxis2D) {
         }
     }
 }
-draw :: (using ax: CartesianAxis2D) {
+draw :: (using ax: *CartesianAxis2D) {
 
     grid_div := 10.0;
     min_grid_gap_px := 20.0;
@@ -866,7 +961,7 @@ update_mouse :: () {
         y := cast(float32)GetMouseY();
 
         for _plot.axes {
-            if CheckCollisionPointRec(vec2(x, y), it.rect) && it.axis_type == .CARTESIAN_2D {
+            if CheckCollisionPointRec(vec2(x, y), it) && it.axis_type == .CARTESIAN_2D {
                 ca := cast(*CartesianAxis2D)it;
                 _mouse = mouse_dragging(ca);
             }
@@ -934,7 +1029,6 @@ mouse_dragging :: (axis: *CartesianAxis2D) -> *Mouse_State_Dragging {
     axis.x_mapper = mapper_constraint(mx, map_inv(mx, axis.x), map_inv(mx, axis.x+axis.width ), axis.x, axis.x+axis.width );
     axis.y_mapper = mapper_constraint(my, map_inv(my, axis.y), map_inv(my, axis.y+axis.height), axis.y, axis.y+axis.height);
     
-    axis.is_original = false;
     return res;
 }
 update :: (using mouse: *Mouse_State_Dragging) {
@@ -1016,17 +1110,25 @@ plot_render :: (_thread: *Thread = null) -> s64 {
             }
         }
 
-        if gui_button(Rectangle.{50.0,15.0,50.0,20.0}, "reset") {
+        rect := rectangle(50.0,15.0,50.0,20.0);
+        if gui_button(rect, "reset") {
             print("reset\n");
             reset(_plot.axes[0]);
         }
 
-        if gui_button(Rectangle.{50.0+50.0+20.0, 15.0, 50.0, 20.0}, "1:1") {
+        rect.x += 50.0 + 20.0;
+        if gui_button(rect, "1:1") {
             print("1:1\n");
             if _plot.axes[0].axis_type == .CARTESIAN_2D {
                 ax := cast(*CartesianAxis2D)_plot.axes[0];
                 equal_scaling(ax);
             }
+        }
+
+        rect.x += 50.0 + 20.0;
+        if gui_button(rect, "fit") {
+            print("fit\n");
+            fit_data(_plot.axes[0], true);
         }
     }
 

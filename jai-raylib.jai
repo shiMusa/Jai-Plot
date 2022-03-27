@@ -71,6 +71,17 @@ camera2d :: (offset:=Vector2.{0.0,0.0}, target:=Vector2.{0.0,0.0}, rotation:=0.0
 }
 
 
+
+rectangle :: (x: float32, y: float32, width: float32, height: float32) -> Rectangle {
+    res : Rectangle;
+    res.x = x;
+    res.y = y;
+    res.width  = width ;
+    res.height = height;
+    return res;
+}
+
+
 vec2 :: (x:float=0.0, y:float=0.0) -> Vector2 {
     res : Vector2 = ---;
     res.x = x;
