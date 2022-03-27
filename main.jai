@@ -1,5 +1,5 @@
 #import "Basic";
-#load "Plot.jai";
+#load "module.jai";
 
 
 
@@ -58,10 +58,8 @@ main :: () {
     plot(highdpi=true);
     x_mapper := mapper_constraint(mapper_logarithmic(), min_x = 0.1, max_x = 100.0);
     y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
-    // x_mapper := mapper_constraint(mapper_linear(), min_x = -5.0, max_x = 5.0, min_y = 0.0, max_y = 1000.0);
-    // y_mapper := mapper_constraint(mapper_linear(), min_x = -5.0, max_x = 5.0, min_y = 0.0, max_y = 1000.0);
     axis := cartesian_axis_2d(x_mapper, y_mapper);
-    ax_id := add_axis(axis);
+    add_axis(axis);
     plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
     plot2d(multi(line(RAYWHITE, 6.0), line(BLUE)), x, y);
     plot2d(multi(symbols(color=RAYWHITE, size=6.0), symbols(.X), symbols(size=3.0)), x, z);
@@ -72,14 +70,11 @@ main :: () {
         symbols(.SQUARE, color=SKYBLUE, size=6.0), 
         symbols(.PLUS, color=GOLD, size=8.0)
     ), vx, vy);
-    // plot_render();
-
 
 
     sim := New(Thread);
     thread_init(sim, simulation);
     thread_start(sim);
-    // simulation(null);
 
     // stop everything
     plot_wait_for_close();

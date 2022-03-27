@@ -30,7 +30,7 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding: Vector4) {
 gui_button :: (
     rect: Rectangle, 
     text := "", 
-    font_size : s32 = 12, 
+    font_size : s32 = 10, 
     line_color := GREY, 
     fill_color := RAYWHITE
 ) -> bool {
@@ -694,7 +694,10 @@ CartesianAxis2D :: struct {
     show_frame: bool = true;
     show_zero_lines: bool = true;
     show_grid: bool = true;
-    show_tick_labels: bool = true;
+    show_tick_labels_left  : bool = true;
+    show_tick_labels_right : bool = true;
+    show_tick_labels_top   : bool = true;
+    show_tick_labels_bottom: bool = true;
     hide_overflow: bool = true;
 }
 cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *CartesianAxis2D {
@@ -900,6 +903,66 @@ draw :: (using ax: *CartesianAxis2D) {
     if show_grid {
         draw_gridlines(true , 0.0, Color.{ 130, 130, 130, 125 }, 1.5);
         draw_gridlines(false, 0.0, Color.{ 130, 130, 130, 125 }, 1.5);
+    }
+
+
+    {
+        font_size : s32 = 10;
+        tick_length := 5;
+        tick_thickness := 2.0;
+        y_padding := 8;
+        x_padding := 8;
+        padding := 5; // pixels
+
+        if show_tick_labels_top || show_tick_labels_bottom {
+            xend : s32 = -1;
+            for xticks {
+                tx := map(x_mapper, it);
+                label := sprint("%", formatFloat(it, trailing_width=2, mode=.SCIENTIFIC));
+                defer free(label);
+                
+                text_width := MeasureText(label,font_size);
+
+                if tx + text_width > x+width then break;
+
+                if xend+padding < cast(s32)tx {
+                    if show_tick_labels_bottom {
+                        DrawLineEx(vec2(tx, y+height), vec2(tx, y+height+tick_length), tick_thickness, BLACK);
+                        DrawText(label,cast(s32)tx,cast(s32)(y+height+y_padding),font_size,BLACK);
+                    }
+                    if show_tick_labels_top {
+                        DrawLineEx(vec2(tx, y-tick_length), vec2(tx, y), tick_thickness, BLACK);
+                        DrawText(label,cast(s32)tx,cast(s32)(y-y_padding-font_size),font_size,BLACK);
+                    }
+                    xend = cast(s32)tx+text_width;
+                }
+            }
+        }
+
+        if show_tick_labels_left || show_tick_labels_right {
+            yend : s32 = -1;
+            for yticks {
+                ty := map(y_mapper, it);
+                label := sprint("%", formatFloat(it, trailing_width=2, mode=.SCIENTIFIC));
+                defer free(label);
+                
+                text_width := MeasureText(label,font_size);
+
+                if ty + font_size > y+height then break;
+
+                if yend+padding < cast(s32)ty {
+                    if show_tick_labels_left {
+                        DrawLineEx(vec2(x-tick_length, ty), vec2(x, ty), tick_thickness, BLACK);
+                        DrawText(label,cast(s32)(x-text_width-x_padding),cast(s32)ty,font_size,BLACK);
+                    }
+                    if show_tick_labels_right {
+                        DrawLineEx(vec2(x+width, ty), vec2(x+width+tick_length, ty), tick_thickness, BLACK);
+                        DrawText(label,cast(s32)(x+width+x_padding),cast(s32)ty,font_size,BLACK);
+                    }
+                    yend = cast(s32)ty+font_size;
+                }
+            }
+        }
     }
 
     if show_zero_lines {
@@ -1184,7 +1247,7 @@ plot_render :: (_thread: *Thread = null) -> s64 {
             if it.axis_type == {
                 case .CARTESIAN_2D;
                     ax := cast(*CartesianAxis2D)it;
-                    fit_into_rectangle(ax, window_rect, vec4(50.0,50.0,50.0,50.0));
+                    fit_into_rectangle(ax, window_rect, vec4(80.0,70.0,80.0,50.0));
                     fit_data(ax);
                     map(ax);
                     draw(ax);
@@ -1195,7 +1258,7 @@ plot_render :: (_thread: *Thread = null) -> s64 {
         update_mouse();
 
 
-        rect := rectangle(50.0,15.0,50.0,20.0);
+        rect := rectangle(20.0,15.0,50.0,20.0);
         if gui_button(rect, "reset") {
             print("reset\n");
             reset(_plot.axes[0]);

@@ -81,6 +81,9 @@ rectangle :: (x: $T, y: T, width: T, height: T) -> Rectangle {
 }
 
 
+vec2 :: inline (x: $T, y: $U) -> Vector2 {
+    return vec2(cast(float32)x, cast(float32)y);
+}
 vec2 :: (x:float=0.0, y:float=0.0) -> Vector2 {
     res : Vector2 = ---;
     res.x = x;
