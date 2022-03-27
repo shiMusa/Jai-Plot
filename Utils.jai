@@ -25,7 +25,7 @@ max :: (arr: []$T) -> T {
 }
 
 
-inv_log_of_10 :: #run 1.0/Math.log(10.0);
+inv_log_of_10 :: #run cast(float32)1.0/Math.log(10.0);
 log10 :: inline (x: float32) -> float32 {
     return cast(float32)(Math.log(x)*inv_log_of_10);
 }

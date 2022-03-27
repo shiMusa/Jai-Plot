@@ -313,6 +313,16 @@ clone :: (m: *Mapper) -> *Mapper {
             return cast(*Mapper)clone(ml);
     }
 }
+get_inner_type :: (m: *Mapper) -> Mapper_Type {
+    if m.type == {
+        case .LINEAR; #through;
+        case .LOGARITHMIC;
+            return m.type;
+        case .CONSTRAINT;
+            cm := cast(*Mapper_Constraint)m;
+            return get_inner_type(cm.inner);
+    }
+}
 map :: (m: *Mapper, x: float32) -> float32 {
     if m.type == {
         case .LINEAR;
@@ -450,6 +460,7 @@ fit :: (using ml: *Mapper_Logarithmic, x: float32, y: float32) {
 }
 fit_bounds :: (using ml: *Mapper_Logarithmic, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
     if min_x < 0.0 then return;
+    if Math.isinf(max_x) then return;
     fit_bounds(
         mapper_linear, 
         Math.log(min_x)*invlogbase,
@@ -543,9 +554,9 @@ fit_bounds :: (cm: *Mapper_Constraint, min_x: float32, max_x: float32, min_y: fl
 
 
 
-ticks_linear :: (min_x: float32, max_x: float32, base: float32 = 10.0, exponent_shift: float32 = 0.0) -> [..]float32 {
+ticks_linear :: (min_x: float32, max_x: float32, base: float32 = 10.0, exponent_shift: float32 = -log10_of_5) -> [..]float32 {
     range := max_x - min_x;
-    dx, exp := round_to_base(range);
+    dx, exp := round_to_base(range, 10.0, exponent_shift);
 
     if dx > 0.5 * range then dx /= base;
 
@@ -556,6 +567,24 @@ ticks_linear :: (min_x: float32, max_x: float32, base: float32 = 10.0, exponent_
         x += dx;
     }
     return res;
+}
+
+ticks_logarithmic :: (min_x: float32, max_x: float32, $$base: float32=10.0) -> [..]float32 {
+    // print("ticks_logarithmic: %, %, %\n", min_x, max_x, base);
+    #if is_constant(base) {
+        invlogbase :: #run 1.0/Math.log(base);
+    } else {
+        invlogbase := 1.0/Math.log(base);
+    }
+
+    log_min_x := Math.log(min_x)*invlogbase;
+    log_max_x := Math.log(max_x)*invlogbase;
+
+    ticks := ticks_linear(log_min_x, log_max_x, base);
+    for *ticks {
+        <<it = Math.pow(base, <<it);
+    }
+    return ticks;
 }
 
 
@@ -693,7 +722,6 @@ zoom :: (axis: *CartesianAxis2D, wheel: float32) {
     ymin := map_inv(axis.y_mapper, (_mouse.y - axis.y)               * delta + axis.y             );
     ymax := map_inv(axis.y_mapper, (_mouse.y - (axis.y+axis.height)) * delta + axis.y+axis.height );
 
-
     fit_bounds(axis.x_mapper, xmin, xmax, axis.x, axis.x + axis.width , true);
     fit_bounds(axis.y_mapper, ymin, ymax, axis.y, axis.y + axis.height, true);
 }
@@ -788,15 +816,29 @@ draw :: (using ax: *CartesianAxis2D) {
     min_grid_gap_px := 20.0;
 
     draw_gridlines :: ($x_axis: bool, exponent_shift: float32, color: Color, thickness: float = 1.0) #expand {
+        ticks : []float;
+        defer array_free(ticks);
         #if x_axis {
             mi := map_inv(x_mapper, x      );
             ma := map_inv(x_mapper, x+width);
+            // ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
+            if get_inner_type(x_mapper) == {
+                case .LINEAR;
+                    ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
+                case .LOGARITHMIC;
+                    ticks = ticks_logarithmic(mi, ma, 10.0);
+            }
         } else {
             mi := map_inv(y_mapper, y       );
             ma := map_inv(y_mapper, y+height);
+            // ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
+            if get_inner_type(y_mapper) == {
+                case .LINEAR;
+                    ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
+                case .LOGARITHMIC;
+                    ticks = ticks_logarithmic(mi, ma, 10.0);
+            }
         }
-        ticks := ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
-        defer array_free(ticks);
 
         for ticks {
             #if x_axis {
@@ -819,10 +861,10 @@ draw :: (using ax: *CartesianAxis2D) {
         }
     }
 
-    if show_subgrid {
-        draw_gridlines(true , -1.0, LIGHTGREY, 1.0);
-        draw_gridlines(false, -1.0, LIGHTGREY, 1.0);
-    }
+    // if show_subgrid {
+    //     draw_gridlines(true , -1.0, LIGHTGREY, 1.0);
+    //     draw_gridlines(false, -1.0, LIGHTGREY, 1.0);
+    // }
 
     for datasets {
         draw(it);
