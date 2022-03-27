@@ -694,7 +694,7 @@ CartesianAxis2D :: struct {
     show_frame: bool = true;
     show_zero_lines: bool = true;
     show_grid: bool = true;
-    show_subgrid: bool = true;
+    show_tick_labels: bool = true;
     hide_overflow: bool = true;
 }
 cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *CartesianAxis2D {
@@ -830,18 +830,21 @@ draw :: (using ax: *CartesianAxis2D) {
     grid_div := 10.0;
     min_grid_gap_px := 20.0;
 
+    xticks : []float;
+    yticks : []float;
+    defer array_free(xticks);
+    defer array_free(yticks);
+
     draw_gridlines :: ($x_axis: bool, exponent_shift: float32, color: Color, thickness: float = 1.0) #expand {
-        ticks : []float;
-        defer array_free(ticks);
         #if x_axis {
             mi := map_inv(x_mapper, x      );
             ma := map_inv(x_mapper, x+width);
             // ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
             if get_inner_type(x_mapper) == {
                 case .LINEAR;
-                    ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
+                    xticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
                 case .LOGARITHMIC;
-                    ticks = ticks_logarithmic(mi, ma, 10.0);
+                    xticks = ticks_logarithmic(mi, ma, 10.0);
             }
         } else {
             mi := map_inv(y_mapper, y       );
@@ -849,10 +852,17 @@ draw :: (using ax: *CartesianAxis2D) {
             // ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
             if get_inner_type(y_mapper) == {
                 case .LINEAR;
-                    ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
+                    yticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
                 case .LOGARITHMIC;
-                    ticks = ticks_logarithmic(mi, ma, 10.0);
+                    yticks = ticks_logarithmic(mi, ma, 10.0);
             }
+        }
+
+        // draw lines
+        #if x_axis {
+            ticks := xticks;
+        } else {
+            ticks := yticks;
         }
 
         for ticks {
@@ -875,11 +885,6 @@ draw :: (using ax: *CartesianAxis2D) {
             }
         }
     }
-
-    // if show_subgrid {
-    //     draw_gridlines(true , -1.0, LIGHTGREY, 1.0);
-    //     draw_gridlines(false, -1.0, LIGHTGREY, 1.0);
-    // }
 
     for datasets {
         draw(it);
@@ -1100,7 +1105,23 @@ mouse_stop_dragging :: (using mouse: *Mouse_State_RBM_Dragging) -> *Mouse_State_
     m := mouse;
     defer free(m);
 
-    fit_bounds(axis, rectangle(old_x, old_y, x-old_x, y-old_y), true);
+    rx, rwidth, ry, rheight: s32;
+    if old_x < x {
+        rx = old_x;
+        rwidth = x-old_x;
+    } else {
+        rx = x;
+        rwidth = old_x-x;
+    }
+    if old_y < y {
+        ry = old_y;
+        rheight = y-old_y;
+    } else {
+        ry = y;
+        rheight = old_y-y;
+    }
+
+    fit_bounds(axis, rectangle(rx,ry,rwidth,rheight), true);
 
     return mouse_free();
 }
