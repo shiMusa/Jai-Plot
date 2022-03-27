@@ -686,13 +686,6 @@ reset :: (axis: *CartesianAxis2D) {
     axis.y_mapper = clone(axis.original_y_mapper);
 }
 zoom :: (axis: *CartesianAxis2D, wheel: float32) {
-    xm := axis.x_mapper;
-    ym := axis.y_mapper;
-    defer {
-        free(xm);
-        free(ym);
-    }
-
     delta := 0.02 * wheel;
 
     xmin := map_inv(axis.x_mapper, (_mouse.x - axis.x)               * delta + axis.x             );
@@ -700,63 +693,9 @@ zoom :: (axis: *CartesianAxis2D, wheel: float32) {
     ymin := map_inv(axis.y_mapper, (_mouse.y - axis.y)               * delta + axis.y             );
     ymax := map_inv(axis.y_mapper, (_mouse.y - (axis.y+axis.height)) * delta + axis.y+axis.height );
 
-    new_inner_x_mapper: *Mapper;
-    new_inner_y_mapper: *Mapper;
 
-    // // ! This is really bad code......
-
-    // print("x_mapper = %\n", <<axis.x_mapper);
-    // print("y_mapper = %\n", <<axis.y_mapper);
-
-    if axis.x_mapper.type == {
-        case .LINEAR;
-            new_inner_x_mapper = mapper_linear();
-        case .LOGARITHMIC;
-            logmapper := cast(*Mapper_Logarithmic)axis.x_mapper;
-            new_inner_x_mapper = mapper_logarithmic(logmapper.base);
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)axis.x_mapper;
-            if cm.inner.type == {
-                case .LINEAR;
-                    new_inner_x_mapper = mapper_linear();
-                case .LOGARITHMIC;
-                    logmapper := cast(*Mapper_Logarithmic)cm.inner;
-                    new_inner_x_mapper = mapper_logarithmic(logmapper.base);
-            }
-    }
-    if axis.y_mapper.type == {
-        case .LINEAR;
-            new_inner_y_mapper = mapper_linear();
-        case .LOGARITHMIC;
-            logmapper := cast(*Mapper_Logarithmic)axis.y_mapper;
-            new_inner_y_mapper = mapper_logarithmic(logmapper.base);
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)axis.y_mapper;
-            if cm.inner.type == {
-                case .LINEAR;
-                    new_inner_y_mapper = mapper_linear();
-                case .LOGARITHMIC;
-                    logmapper := cast(*Mapper_Logarithmic)cm.inner;
-                    new_inner_y_mapper = mapper_logarithmic(logmapper.base);
-            }
-    }
-
-    axis.x_mapper = mapper_constraint(
-        new_inner_x_mapper, 
-        // mapper_linear(), 
-        xmin, 
-        xmax, 
-        axis.x, 
-        axis.x + axis.width
-    );
-    axis.y_mapper = mapper_constraint(
-        new_inner_y_mapper, 
-        // mapper_linear(), 
-        ymin, 
-        ymax, 
-        axis.y, 
-        axis.y + axis.height
-    );
+    fit_bounds(axis.x_mapper, xmin, xmax, axis.x, axis.x + axis.width , true);
+    fit_bounds(axis.y_mapper, ymin, ymax, axis.y, axis.y + axis.height, true);
 }
 
 
