@@ -629,6 +629,13 @@ fit_data :: (ax: *Axis, overwrite_constraints: bool = false) {
             fit_data(ca, overwrite_constraints);
     }
 }
+fit_bounds :: (ax: *Axis, gui_rect: Rectangle, overwrite_constraints : bool = false) {
+    if ax.axis_type == {
+        case .CARTESIAN_2D;
+            ca := cast(*CartesianAxis2D)ax;
+            fit_bounds(ca, gui_rect, overwrite_constraints);
+    }
+}
 
 
 
@@ -770,7 +777,15 @@ equal_scaling :: (axis: *CartesianAxis2D) {
         axis.y + axis.height
     );
 }
+fit_bounds :: (using ax: *CartesianAxis2D, gui_rect: Rectangle, overwrite_constraints : bool = false) {
+    min_x := map_inv(x_mapper, gui_rect.x);
+    max_x := map_inv(x_mapper, gui_rect.x+gui_rect.width);
+    min_y := map_inv(y_mapper, gui_rect.y);
+    max_y := map_inv(y_mapper, gui_rect.y+gui_rect.height);
 
+    fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
+    fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
+}
 fit_data :: (using ax: *CartesianAxis2D, overwrite_constraints: bool = false) {
     if datasets.count == 0 then return;
 
@@ -927,6 +942,7 @@ _mouse : *Mouse_State;
 Mouse_State_Types :: enum u8 {
     FREE;
     DRAGGING;
+    RMB_DRAGGING;
 }
 Mouse_State :: struct {
     type: Mouse_State_Types = .FREE;
@@ -947,10 +963,24 @@ update_mouse :: () {
                 _mouse = mouse_dragging(ca);
             }
         }
-    }
-    if !IsMouseButtonDown(0) && _mouse.type == .DRAGGING {
-        print("free\n");
+    } else if !IsMouseButtonDown(0) && _mouse.type == .DRAGGING {
+        print("stop dragging\n");
         md := cast(*Mouse_State_Dragging)_mouse;
+        _mouse = cast(*Mouse_State)mouse_stop_dragging(md);
+    } else if IsMouseButtonDown(1) && _mouse.type == .FREE {
+        print("rmb dragging\n");
+        x := cast(float32)GetMouseX();
+        y := cast(float32)GetMouseY();
+
+        for _plot.axes {
+            if CheckCollisionPointRec(vec2(x,y), it) && it.axis_type == .CARTESIAN_2D {
+                ca := cast(*CartesianAxis2D)it;
+                _mouse = mouse_rbm_dragging(ca);
+            }
+        }
+    } else if !IsMouseButtonDown(1) && _mouse.type == .RMB_DRAGGING {
+        print("stop rmb dragging\n");
+        md := cast(*Mouse_State_RBM_Dragging)_mouse;
         _mouse = cast(*Mouse_State)mouse_stop_dragging(md);
     }
 
@@ -963,6 +993,9 @@ update_mouse :: () {
             update(mf);
         case .DRAGGING;
             md := cast(*Mouse_State_Dragging)_mouse;
+            update(md);
+        case .RMB_DRAGGING;
+            md := cast(*Mouse_State_RBM_Dragging)_mouse;
             update(md);
     }
 }
@@ -1006,7 +1039,6 @@ mouse_dragging :: (axis: *CartesianAxis2D) -> *Mouse_State_Dragging {
     res.old_x = map_inv(mx, cast(float32)res.x);
     res.old_y = map_inv(my, cast(float32)res.y);
     
-    // replace the axis mappers with fully constraint ones for dragging
     axis.x_mapper = mapper_constraint(mx, map_inv(mx, axis.x), map_inv(mx, axis.x+axis.width ), axis.x, axis.x+axis.width );
     axis.y_mapper = mapper_constraint(my, map_inv(my, axis.y), map_inv(my, axis.y+axis.height), axis.y, axis.y+axis.height);
     
@@ -1022,6 +1054,54 @@ update :: (using mouse: *Mouse_State_Dragging) {
 mouse_stop_dragging :: (using mouse: *Mouse_State_Dragging) -> *Mouse_State_Free {
     m := mouse;
     defer free(m);
+    return mouse_free();
+}
+
+
+
+Mouse_State_RBM_Dragging :: struct {
+    using mouse_state: Mouse_State;
+    old_x, old_y: s32;
+    axis: *CartesianAxis2D;
+}
+mouse_rbm_dragging :: (axis: *CartesianAxis2D) -> *Mouse_State_RBM_Dragging {
+    res := New(Mouse_State_RBM_Dragging);
+    res.type = .RMB_DRAGGING;
+    res.x = GetMouseX();
+    res.y = GetMouseY();
+    res.axis = axis;
+    res.old_x = res.x;
+    res.old_y = res.y;
+    return res;
+}
+update :: (using mouse: *Mouse_State_RBM_Dragging) {
+    x = GetMouseX();
+    y = GetMouseY();
+
+    rx, rwidth, ry, rheight: s32;
+    if old_x < x {
+        rx = old_x;
+        rwidth = x-old_x;
+    } else {
+        rx = x;
+        rwidth = old_x-x;
+    }
+    if old_y < y {
+        ry = old_y;
+        rheight = y-old_y;
+    } else {
+        ry = y;
+        rheight = old_y-y;
+    }
+
+    DrawRectangleLinesEx(rectangle(rx,ry,rwidth,rheight), 2.0, RED);
+}
+mouse_stop_dragging :: (using mouse: *Mouse_State_RBM_Dragging) -> *Mouse_State_Free {
+    m := mouse;
+    defer free(m);
+
+    fit_bounds(axis, rectangle(old_x, old_y, x-old_x, y-old_y), true);
+
     return mouse_free();
 }
 
@@ -1074,7 +1154,6 @@ plot_render :: (_thread: *Thread = null) -> s64 {
         window_rect.width  = cast(float)GetScreenWidth();
         window_rect.height = cast(float)GetScreenHeight();
 
-        update_mouse();
 
         Drawing();
         ClearBackground(RAYWHITE);
@@ -1090,6 +1169,10 @@ plot_render :: (_thread: *Thread = null) -> s64 {
                     draw(ax);
             }
         }
+
+
+        update_mouse();
+
 
         rect := rectangle(50.0,15.0,50.0,20.0);
         if gui_button(rect, "reset") {
