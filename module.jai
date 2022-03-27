@@ -603,7 +603,7 @@ Axis_Type :: enum u8 {
     CARTESIAN_2D;
 }
 Axis :: struct {
-    using rect: Rectangle;
+    rectangle: Rectangle;
     axis_type: Axis_Type;
     datasets: [..]Data2D;
 }
@@ -620,6 +620,13 @@ zoom :: (ax: *Axis, wheel: float32) {
         case .CARTESIAN_2D;
             ca := cast(*CartesianAxis2D)ax;
             zoom(ca, wheel);
+    }
+}
+fit_into_rectangle :: (ax: *Axis, rectangle: Rectangle) {
+    if ax.axis_type == {
+        case .CARTESIAN_2D;
+            ca := cast(*CartesianAxis2D)ax;
+            fit_into_rectangle(ca, rectangle);
     }
 }
 fit_data :: (ax: *Axis, overwrite_constraints: bool = false) {
@@ -683,7 +690,9 @@ bounds_extra :: (using ax: *Axis, index: int) -> float32, float32 {
 
 
 CartesianAxis2D :: struct {
-    using axis: Axis;
+    using _axis: Axis;
+
+    inner_rect : Rectangle;
 
     original_x_mapper: *Mapper;
     original_y_mapper: *Mapper;
@@ -699,11 +708,20 @@ CartesianAxis2D :: struct {
     show_tick_labels_top   : bool = true;
     show_tick_labels_bottom: bool = true;
     hide_overflow: bool = true;
+
+    axis_padding := Vector4.{70.0, 50.0, 70.0, 50.0}; // left, right, top, bottom
+
+    font_size : s32 = 10;
+    tick_length := 5;
+    tick_thickness := 2.0;
+    y_padding := 8;
+    x_padding := 8;
+    tick_padding := 5;
 }
 cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *CartesianAxis2D {
     res := New(CartesianAxis2D);
     res.axis_type = .CARTESIAN_2D;
-    res.rect      = window_rect;
+    res.rectangle = window_rect;
     res.datasets  = NewResizableArray(0, Data2D);
     
     res.x_mapper = ifx x_mapper then x_mapper else mapper_linear();
@@ -724,61 +742,70 @@ reset :: (axis: *CartesianAxis2D) {
     axis.x_mapper = clone(axis.original_x_mapper);
     axis.y_mapper = clone(axis.original_y_mapper);
 }
-zoom :: (axis: *CartesianAxis2D, wheel: float32) {
+zoom :: (using axis: *CartesianAxis2D, wheel: float32) {
+    using inner_rect;
+    
     delta := 0.02 * wheel;
 
-    xmin := map_inv(axis.x_mapper, (_mouse.x - axis.x)               * delta + axis.x             );
-    xmax := map_inv(axis.x_mapper, (_mouse.x - (axis.x+axis.width )) * delta + axis.x+axis.width  );
-    ymin := map_inv(axis.y_mapper, (_mouse.y - axis.y)               * delta + axis.y             );
-    ymax := map_inv(axis.y_mapper, (_mouse.y - (axis.y+axis.height)) * delta + axis.y+axis.height );
+    xmin := map_inv(x_mapper, (_mouse.x - x)          * delta + x        );
+    xmax := map_inv(x_mapper, (_mouse.x - (x+width )) * delta + x+width  );
+    ymin := map_inv(y_mapper, (_mouse.y - y)          * delta + y        );
+    ymax := map_inv(y_mapper, (_mouse.y - (y+height)) * delta + y+height );
 
-    fit_bounds(axis.x_mapper, xmin, xmax, axis.x, axis.x + axis.width , true);
-    fit_bounds(axis.y_mapper, ymin, ymax, axis.y, axis.y + axis.height, true);
+    fit_bounds(x_mapper, xmin, xmax, x, x + width , true);
+    fit_bounds(y_mapper, ymin, ymax, y, y + height, true);
 }
+equal_scaling :: (using axis: *CartesianAxis2D) {
+    using inner_rect;
 
-
-equal_scaling :: (axis: *CartesianAxis2D) {
-    xm := axis.x_mapper;
-    ym := axis.y_mapper;
+    xm := x_mapper;
+    ym := y_mapper;
     defer {
         free(xm);
         free(ym);
     }
 
-    dx := map_inv(axis.x_mapper, axis.x+axis.width ) - map_inv(axis.x_mapper, axis.x);
-    dy := map_inv(axis.y_mapper, axis.y+axis.height) - map_inv(axis.y_mapper, axis.y);
-    x0 := map_inv(axis.x_mapper, axis.x + 0.5*axis.width );
-    y0 := map_inv(axis.y_mapper, axis.y + 0.5*axis.height);
+    dx := map_inv(x_mapper, x +     width ) - map_inv(x_mapper, x);
+    dy := map_inv(y_mapper, y +     height) - map_inv(y_mapper, y);
+    x0 := map_inv(x_mapper, x + 0.5*width );
+    y0 := map_inv(y_mapper, y + 0.5*height);
 
     xmin, xmax, ymin, ymax : float32;
     if dx > dy {
-        xmin = map_inv(axis.x_mapper, axis.x);
-        xmax = map_inv(axis.x_mapper, axis.x + axis.width);
-        dxdp := (xmax-xmin)/axis.width;
-        ymin = -dxdp*axis.height*0.5 + y0;
-        ymax =  dxdp*axis.height*0.5 + y0;
+        xmin = map_inv(x_mapper, x);
+        xmax = map_inv(x_mapper, x + width);
+        dxdp := (xmax-xmin)/width;
+        ymin = -dxdp*height*0.5 + y0;
+        ymax =  dxdp*height*0.5 + y0;
     } else {
-        ymin = map_inv(axis.y_mapper, axis.y);
-        ymax = map_inv(axis.y_mapper, axis.y + axis.height);
-        dydp := (ymax-ymin)/axis.height;
-        xmin = -dydp*axis.width*0.5 + x0;
-        xmax =  dydp*axis.width*0.5 + x0;
+        ymin = map_inv(y_mapper, y);
+        ymax = map_inv(y_mapper, y + height);
+        dydp := (ymax-ymin)/height;
+        xmin = -dydp*width*0.5 + x0;
+        xmax =  dydp*width*0.5 + x0;
     }
 
-    axis.x_mapper = mapper_constraint(
+    x_mapper = mapper_constraint(
         mapper_linear(), 
         xmin, 
         xmax, 
-        axis.x, 
-        axis.x + axis.width
+        x, 
+        x + width
     );
-    axis.y_mapper = mapper_constraint(
+    y_mapper = mapper_constraint(
         mapper_linear(), 
         ymin, 
         ymax, 
-        axis.y, 
-        axis.y + axis.height
+        y, 
+        y + height
     );
+}
+fit_into_rectangle :: (using ax: *CartesianAxis2D, r: Rectangle) {
+    rectangle = r;
+    inner_rect.x = r.x + axis_padding.x;
+    inner_rect.y = r.y + axis_padding.y;
+    inner_rect.width  = r.width  - (axis_padding.x + axis_padding.z);
+    inner_rect.height = r.height - (axis_padding.y + axis_padding.w);
 }
 fit_bounds :: (using ax: *CartesianAxis2D, gui_rect: Rectangle, overwrite_constraints : bool = false) {
     min_x := map_inv(x_mapper, gui_rect.x);
@@ -786,6 +813,7 @@ fit_bounds :: (using ax: *CartesianAxis2D, gui_rect: Rectangle, overwrite_constr
     min_y := map_inv(y_mapper, gui_rect.y);
     max_y := map_inv(y_mapper, gui_rect.y+gui_rect.height);
 
+    using inner_rect;
     fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
     fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
 }
@@ -803,6 +831,7 @@ fit_data :: (using ax: *CartesianAxis2D, overwrite_constraints: bool = false) {
         max_y = max(max_y, max(datasets[i].y));
     }
 
+    using inner_rect;
     fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
     fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
 }
@@ -840,8 +869,8 @@ draw :: (using ax: *CartesianAxis2D) {
 
     draw_gridlines :: ($x_axis: bool, exponent_shift: float32, color: Color, thickness: float = 1.0) #expand {
         #if x_axis {
-            mi := map_inv(x_mapper, x      );
-            ma := map_inv(x_mapper, x+width);
+            mi := map_inv(x_mapper, inner_rect.x                   );
+            ma := map_inv(x_mapper, inner_rect.x + inner_rect.width);
             // ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
             if get_inner_type(x_mapper) == {
                 case .LINEAR;
@@ -850,8 +879,8 @@ draw :: (using ax: *CartesianAxis2D) {
                     xticks = ticks_logarithmic(mi, ma, 10.0);
             }
         } else {
-            mi := map_inv(y_mapper, y       );
-            ma := map_inv(y_mapper, y+height);
+            mi := map_inv(y_mapper, inner_rect.y                    );
+            ma := map_inv(y_mapper, inner_rect.y + inner_rect.height);
             // ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
             if get_inner_type(y_mapper) == {
                 case .LINEAR;
@@ -872,16 +901,16 @@ draw :: (using ax: *CartesianAxis2D) {
             #if x_axis {
                 tx := map(x_mapper, it);
                 DrawLineEx(
-                    vec2(tx, y), 
-                    vec2(tx, y+height), 
+                    vec2(tx, inner_rect.y                    ), 
+                    vec2(tx, inner_rect.y + inner_rect.height), 
                     thickness, 
                     color
                 );
             } else {
                 ty := map(y_mapper, it);
                 DrawLineEx(
-                    vec2(x      , ty), 
-                    vec2(x+width, ty), 
+                    vec2(inner_rect.x                   , ty), 
+                    vec2(inner_rect.x + inner_rect.width, ty), 
                     thickness, 
                     color
                 );
@@ -894,10 +923,10 @@ draw :: (using ax: *CartesianAxis2D) {
     }
 
     if hide_overflow {
-        DrawRectangleV(vec2(0.0,0.0), vec2(rect.width, rect.y), RAYWHITE);
-        DrawRectangleV(vec2(0.0, rect.y+rect.height), vec2(window_rect.width, window_rect.height), RAYWHITE);
-        DrawRectangleV(vec2(0.0,0.0), vec2(rect.x, window_rect.height), RAYWHITE);
-        DrawRectangleV(vec2(rect.x+rect.width,0.0), vec2(window_rect.width, window_rect.height), RAYWHITE);
+        DrawRectangleV(vec2(0.0,0.0), vec2(inner_rect.width, inner_rect.y), RAYWHITE);
+        DrawRectangleV(vec2(0.0, inner_rect.y+inner_rect.height), vec2(window_rect.width, window_rect.height), RAYWHITE);
+        DrawRectangleV(vec2(0.0,0.0), vec2(inner_rect.x, window_rect.height), RAYWHITE);
+        DrawRectangleV(vec2(inner_rect.x+inner_rect.width,0.0), vec2(window_rect.width, window_rect.height), RAYWHITE);
     }
 
     if show_grid {
@@ -906,13 +935,8 @@ draw :: (using ax: *CartesianAxis2D) {
     }
 
 
-    {
-        font_size : s32 = 10;
-        tick_length := 5;
-        tick_thickness := 2.0;
-        y_padding := 8;
-        x_padding := 8;
-        padding := 5; // pixels
+    { // tick labels
+        using inner_rect;
 
         if show_tick_labels_top || show_tick_labels_bottom {
             xend : s32 = -1;
@@ -925,7 +949,7 @@ draw :: (using ax: *CartesianAxis2D) {
 
                 if tx + text_width > x+width then break;
 
-                if xend+padding < cast(s32)tx {
+                if xend+tick_padding < cast(s32)tx {
                     if show_tick_labels_bottom {
                         DrawLineEx(vec2(tx, y+height), vec2(tx, y+height+tick_length), tick_thickness, BLACK);
                         DrawText(label,cast(s32)tx,cast(s32)(y+height+y_padding),font_size,BLACK);
@@ -950,7 +974,7 @@ draw :: (using ax: *CartesianAxis2D) {
 
                 if ty + font_size > y+height then break;
 
-                if yend+padding < cast(s32)ty {
+                if yend+tick_padding < cast(s32)ty {
                     if show_tick_labels_left {
                         DrawLineEx(vec2(x-tick_length, ty), vec2(x, ty), tick_thickness, BLACK);
                         DrawText(label,cast(s32)(x-text_width-x_padding),cast(s32)ty,font_size,BLACK);
@@ -966,6 +990,8 @@ draw :: (using ax: *CartesianAxis2D) {
     }
 
     if show_zero_lines {
+        using inner_rect;
+
         x0 := map(x_mapper, 0.0);
         y0 := map(y_mapper, 0.0);
 
@@ -989,7 +1015,7 @@ draw :: (using ax: *CartesianAxis2D) {
     }
 
     if show_frame {
-        DrawRectangleLinesEx(rect, 2.0, BLACK);
+        DrawRectangleLinesEx(inner_rect, 2.0, BLACK);
     }
 }
 
@@ -1026,9 +1052,12 @@ update_mouse :: () {
         y := cast(float32)GetMouseY();
 
         for _plot.axes {
-            if CheckCollisionPointRec(vec2(x, y), it) && it.axis_type == .CARTESIAN_2D {
-                ca := cast(*CartesianAxis2D)it;
-                _mouse = mouse_dragging(ca);
+            if it.axis_type == {
+                case .CARTESIAN_2D;
+                    ca := cast(*CartesianAxis2D)it;
+                    if CheckCollisionPointRec(vec2(x, y), ca.inner_rect) {
+                        _mouse = mouse_dragging(ca);
+                    }
             }
         }
     } else if !IsMouseButtonDown(0) && _mouse.type == .DRAGGING {
@@ -1041,9 +1070,12 @@ update_mouse :: () {
         y := cast(float32)GetMouseY();
 
         for _plot.axes {
-            if CheckCollisionPointRec(vec2(x,y), it) && it.axis_type == .CARTESIAN_2D {
-                ca := cast(*CartesianAxis2D)it;
-                _mouse = mouse_rbm_dragging(ca);
+            if it.axis_type == {
+                case .CARTESIAN_2D;
+                    ca := cast(*CartesianAxis2D)it;
+                    if CheckCollisionPointRec(vec2(x,y), ca.inner_rect) {
+                        _mouse = mouse_rbm_dragging(ca);
+                    }
             }
         }
     } else if !IsMouseButtonDown(1) && _mouse.type == .RMB_DRAGGING {
@@ -1082,9 +1114,13 @@ update :: (using mouse: *Mouse_State_Free) {
     wheel := GetMouseWheelMove();
     mv := vec2(cast(float32)x, cast(float32)y);
     for _plot.axes {
-        if CheckCollisionPointRec(mv, it) && wheel != 0.0 {
-            // print("zoom %\n", wheel);
-            zoom(it, wheel);
+        if it.axis_type == {
+            case .CARTESIAN_2D;
+                ca := cast(*CartesianAxis2D)it;
+                if CheckCollisionPointRec(mv, ca.inner_rect) && wheel != 0.0 {
+                    // print("zoom %\n", wheel);
+                    zoom(ca, wheel);
+                }
         }
     }
 }
@@ -1095,20 +1131,22 @@ Mouse_State_Dragging :: struct {
     old_y: float32 = 0.0;
     axis: *CartesianAxis2D;
 }
-mouse_dragging :: (axis: *CartesianAxis2D) -> *Mouse_State_Dragging {
+mouse_dragging :: (using axis: *CartesianAxis2D) -> *Mouse_State_Dragging {
+    using inner_rect;
+
     res := New(Mouse_State_Dragging);
     res.type = .DRAGGING;
     res.x = GetMouseX();
     res.y = GetMouseY();
     res.axis = axis;
 
-    mx := ifx axis.x_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)axis.x_mapper).inner else axis.x_mapper;
-    my := ifx axis.y_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)axis.y_mapper).inner else axis.y_mapper;
+    mx := ifx x_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)x_mapper).inner else x_mapper;
+    my := ifx y_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)y_mapper).inner else y_mapper;
     res.old_x = map_inv(mx, cast(float32)res.x);
     res.old_y = map_inv(my, cast(float32)res.y);
     
-    axis.x_mapper = mapper_constraint(mx, map_inv(mx, axis.x), map_inv(mx, axis.x+axis.width ), axis.x, axis.x+axis.width );
-    axis.y_mapper = mapper_constraint(my, map_inv(my, axis.y), map_inv(my, axis.y+axis.height), axis.y, axis.y+axis.height);
+    x_mapper = mapper_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
+    y_mapper = mapper_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
     
     return res;
 }
@@ -1247,7 +1285,7 @@ plot_render :: (_thread: *Thread = null) -> s64 {
             if it.axis_type == {
                 case .CARTESIAN_2D;
                     ax := cast(*CartesianAxis2D)it;
-                    fit_into_rectangle(ax, window_rect, vec4(80.0,70.0,80.0,50.0));
+                    fit_into_rectangle(ax, window_rect);//, vec4(80.0,70.0,80.0,50.0));
                     fit_data(ax);
                     map(ax);
                     draw(ax);
