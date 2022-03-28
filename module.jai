@@ -1342,19 +1342,28 @@ Plot :: struct {
     active_page: *Page;
     active_axis: *Axis;
     running: bool = false;
+    callback: () -> ();
 }
 
 _plot : Plot;
 
-plot :: (msaa : bool = true, highdpi: bool = false) {
+_empty :: () {}
+plot :: (msaa : bool = true, highdpi: bool = false, callback: ()->() = _empty) {
     flags := ConfigFlags.WINDOW_RESIZABLE;
     if highdpi then flags |= ConfigFlags.WINDOW_HIGHDPI;
     if msaa    then flags |= ConfigFlags.MSAA_4X_HINT;
     SetConfigFlags(xx flags);
 
+    _plot.callback = callback;
     _plot.pages = NewResizableArray(0, *Page);
     _plot.thread = New(Thread);
-    thread_init(_plot.thread, plot_render);
+
+    render_thread :: (_thread: *Thread = null) -> s64 {
+        plot_render();
+        return 0;
+    }
+
+    thread_init(_plot.thread, render_thread);
     thread_start(_plot.thread);
 
     while !_plot.running {
@@ -1362,7 +1371,7 @@ plot :: (msaa : bool = true, highdpi: bool = false) {
     }
 }
 
-plot_render :: (_thread: *Thread = null) -> s64 {
+plot_render :: () {
     Window(cast(s32)WINDOW_RECT.width, cast(s32)WINDOW_RECT.height, "Jai Plot");
     SetTargetFPS(60);
 
@@ -1388,7 +1397,7 @@ plot_render :: (_thread: *Thread = null) -> s64 {
         update_mouse();
     }
 
-    return 0; // what is this for?
+    _plot.callback(); 
 }
 
 add_page :: (p: *$P/Page) {

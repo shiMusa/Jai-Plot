@@ -3,7 +3,7 @@
 
 
 
-simulation :: (_thread: *Thread = null) -> s64 {
+simulation :: () {
 
     for *x {
         <<it = 100.0 * (cast(float32)it_index/cast(float32)(N-1));
@@ -34,11 +34,11 @@ simulation :: (_thread: *Thread = null) -> s64 {
         // print("simulate\n");
         sleep_milliseconds(10);
     }
-    return 0;
 }
 
 
 stop_simulation : bool = false;
+stop :: () { stop_simulation = true; }
 
 N :: 201;
 NP :: 20;
@@ -55,7 +55,7 @@ cy : [361]float32;
 
 main :: () {
 
-    plot(highdpi=true);
+    plot(highdpi=true, callback=stop);
     x_mapper := mapper_constraint(mapper_logarithmic(), min_x = 0.1, max_x = 100.0);
     y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
     axis := cartesian_axis_2d(x_mapper, y_mapper);
@@ -74,15 +74,7 @@ main :: () {
         symbols(.PLUS, color=GOLD, size=8.0)
     ), vx, vy);
 
+    simulation();
 
-    sim := New(Thread);
-    thread_init(sim, simulation);
-    thread_start(sim);
-
-    // stop everything
     plot_wait_for_close();
-    stop_simulation = true;
-    while !thread_is_done(sim) {
-        sleep_milliseconds(100);
-    }
 }
