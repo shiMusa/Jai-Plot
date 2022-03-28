@@ -6,7 +6,7 @@ Math :: #import "Math";
 #load "jai-raylib.jai";
 
 
-window_rect := Rectangle.{0,0,800,600};
+WINDOW_RECT := Rectangle.{0,0,800,600};
 
 
 fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding: Vector4) {
@@ -607,7 +607,13 @@ Axis :: struct {
     axis_type: Axis_Type;
     datasets: [..]Data2D;
 }
-
+update_and_draw :: (ax: *Axis) {
+    if ax.axis_type == {
+        case .CARTESIAN_2D;
+            ca := cast(*CartesianAxis2D)ax;
+            update_and_draw(ca);
+    }
+}
 reset :: (ax: *Axis) {
     if ax.axis_type == {
         case .CARTESIAN_2D;
@@ -722,7 +728,7 @@ CartesianAxis2D :: struct {
 cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *CartesianAxis2D {
     res := New(CartesianAxis2D);
     res.axis_type = .CARTESIAN_2D;
-    res.rectangle = window_rect;
+    res.rectangle = WINDOW_RECT;
     res.datasets  = NewResizableArray(0, Data2D);
     
     res.x_mapper = ifx x_mapper then x_mapper else mapper_linear();
@@ -863,6 +869,12 @@ map :: (using ax: *CartesianAxis2D) {
         }
     }
 }
+update_and_draw :: (ax: *CartesianAxis2D) {
+    fit_into_rectangle(ax, WINDOW_RECT);//, vec4(80.0,70.0,80.0,50.0));
+    fit_data(ax);
+    map(ax);
+    draw(ax);
+}
 draw :: (using ax: *CartesianAxis2D) {
 
     grid_div := 10.0;
@@ -931,9 +943,9 @@ draw :: (using ax: *CartesianAxis2D) {
 
     if hide_overflow {
         DrawRectangleV(vec2(0.0,0.0), vec2(inner_rect.width, inner_rect.y), RAYWHITE);
-        DrawRectangleV(vec2(0.0, inner_rect.y+inner_rect.height), vec2(window_rect.width, window_rect.height), RAYWHITE);
-        DrawRectangleV(vec2(0.0,0.0), vec2(inner_rect.x, window_rect.height), RAYWHITE);
-        DrawRectangleV(vec2(inner_rect.x+inner_rect.width,0.0), vec2(window_rect.width, window_rect.height), RAYWHITE);
+        DrawRectangleV(vec2(0.0, inner_rect.y+inner_rect.height), vec2(WINDOW_RECT.width, WINDOW_RECT.height), RAYWHITE);
+        DrawRectangleV(vec2(0.0,0.0), vec2(inner_rect.x, WINDOW_RECT.height), RAYWHITE);
+        DrawRectangleV(vec2(inner_rect.x+inner_rect.width,0.0), vec2(WINDOW_RECT.width, WINDOW_RECT.height), RAYWHITE);
     }
 
     if show_grid {
@@ -1270,7 +1282,7 @@ plot :: (msaa : bool = true, highdpi: bool = false) {
 }
 
 plot_render :: (_thread: *Thread = null) -> s64 {
-    Window(cast(s32)window_rect.width, cast(s32)window_rect.height, "Jai Plot");
+    Window(cast(s32)WINDOW_RECT.width, cast(s32)WINDOW_RECT.height, "Jai Plot");
     SetTargetFPS(60);
 
     init_symbol_texture();
@@ -1280,8 +1292,8 @@ plot_render :: (_thread: *Thread = null) -> s64 {
     _plot.running = true;
 
     while !WindowShouldClose() {
-        window_rect.width  = cast(float)GetScreenWidth();
-        window_rect.height = cast(float)GetScreenHeight();
+        WINDOW_RECT.width  = cast(float)GetScreenWidth();
+        WINDOW_RECT.height = cast(float)GetScreenHeight();
 
 
         Drawing();
@@ -1289,19 +1301,11 @@ plot_render :: (_thread: *Thread = null) -> s64 {
         Mode2D(camera);
 
         for _plot.axes {
-            if it.axis_type == {
-                case .CARTESIAN_2D;
-                    ax := cast(*CartesianAxis2D)it;
-                    fit_into_rectangle(ax, window_rect);//, vec4(80.0,70.0,80.0,50.0));
-                    fit_data(ax);
-                    map(ax);
-                    draw(ax);
-            }
+            update_and_draw(it);
         }
 
-
         update_mouse();
-
+        
 
         rect := rectangle(20.0,15.0,50.0,20.0);
         if gui_button(rect, "reset") {
