@@ -9,7 +9,7 @@ Math :: #import "Math";
 WINDOW_RECT := Rectangle.{0,0,800,600};
 
 
-fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding: Vector4) {
+fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding := Vector4.{0.0,0.0,0.0,0.0}) {
     r.x = rectangle.x + padding.x;
     r.y = rectangle.y + padding.y;
     r.width  = rectangle.width  - (padding.x + padding.z);
@@ -632,6 +632,7 @@ page_single :: (axis: *Axis) -> *Page_Single {
     return res;
 }
 draw :: (page: *Page_Single) {
+    fit_into_rectangle(page.axis, page.page_rectangle);
     update_and_draw(page.axis);
 }
 intersection_axis :: inline (using page: *Page_Single, pos: Vector2) -> *Axis {
@@ -786,7 +787,7 @@ CartesianAxis2D :: struct {
     show_gui: bool = true;
     gui_padding: float32 = 50.0;
 
-    axis_padding := Vector4.{70.0, 30.0, 70.0, 30.0}; // left, bottom, right, top
+    axis_padding := Vector4.{70.0, 30.0, 70.0, 50.0}; // left, top, right, bottom
 
     font_size : s32 = 10;
     tick_length := 5;
@@ -975,7 +976,6 @@ mouse_rmb_dragging :: (axis: *CartesianAxis2D) -> *Mouse_State_RMB_Dragging {
     return res;
 }
 update_and_draw :: (ax: *CartesianAxis2D) {
-    fit_into_rectangle(ax, WINDOW_RECT);//, vec4(80.0,70.0,80.0,50.0));
     fit_data(ax);
     map(ax);
     draw(ax);
@@ -1390,8 +1390,26 @@ plot_render :: () {
         ClearBackground(RAYWHITE);
         Mode2D(camera);
 
+        button_pane_width := 50.0;
+        page_button_pane := rectangle(0,0,button_pane_width,WINDOW_RECT.height);
+        page_pane := rectangle(button_pane_width,0,WINDOW_RECT.width-button_pane_width,WINDOW_RECT.height);
+
+        button_rect := rectangle(10.0,15.0,30.0,20.0);
         for _plot.pages {
-            draw(it);
+            text := sprint("%", it_index);
+            defer free(text);
+
+            color := ifx _plot.active_page == it then RED else GREY;
+
+            if gui_button(button_rect, text, 10, line_color=color) {
+                _plot.active_page = it;
+            }
+            button_rect.y += 20.0 + 20.0;
+        }
+
+        if _plot.active_page {
+            fit_into_rectangle(*_plot.active_page.page_rectangle, page_pane);
+            draw(_plot.active_page);
         }
 
         update_mouse();

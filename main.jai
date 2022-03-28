@@ -4,7 +4,6 @@
 
 
 simulation :: () {
-
     for *x {
         <<it = 100.0 * (cast(float32)it_index/cast(float32)(N-1));
     }
@@ -56,6 +55,7 @@ cy : [361]float32;
 main :: () {
 
     plot(highdpi=true, callback=stop);
+
     x_mapper := mapper_constraint(mapper_logarithmic(), min_x = 0.1, max_x = 100.0);
     y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
     axis := cartesian_axis_2d(x_mapper, y_mapper);
@@ -66,6 +66,13 @@ main :: () {
     plot2d(bars(Color.{ 211, 176, 131, 125 }), x, w);
     plot2d(multi(line(RAYWHITE, 6.0), line(BLUE)), x, y);
     plot2d(multi(symbols(color=RAYWHITE, size=6.0), symbols(.X), symbols(size=3.0)), x, z);
+
+
+    x_mapper2 := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
+    y_mapper2 := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
+    axis2 := cartesian_axis_2d(x_mapper2, y_mapper2);
+    activate(axis2);
+    add_page(page_single(axis2));
 
     plot2d(line(SKYBLUE, 4.0), cx, cy);
     plot2d(multi(
