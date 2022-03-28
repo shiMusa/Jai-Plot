@@ -384,7 +384,7 @@ fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y
 
 
 Mapper_Linear :: struct {
-    using _m: Mapper;
+    using _m : Mapper;
     y0, dydx : float32;
 }
 clone :: (m: *Mapper_Linear) -> *Mapper_Linear {
@@ -699,6 +699,7 @@ CartesianAxis2D :: struct {
 
     x_mapper: *Mapper;
     y_mapper: *Mapper;
+    flip_y: bool = true;
 
     show_frame: bool = true;
     show_zero_lines: bool = true;
@@ -709,7 +710,7 @@ CartesianAxis2D :: struct {
     show_tick_labels_bottom: bool = true;
     hide_overflow: bool = true;
 
-    axis_padding := Vector4.{70.0, 50.0, 70.0, 50.0}; // left, right, top, bottom
+    axis_padding := Vector4.{70.0, 50.0, 70.0, 50.0}; // left, bottom, right, top
 
     font_size : s32 = 10;
     tick_length := 5;
@@ -771,13 +772,14 @@ equal_scaling :: (using axis: *CartesianAxis2D) {
     y0 := map_inv(y_mapper, y + 0.5*height);
 
     xmin, xmax, ymin, ymax : float32;
-    if dx > dy {
+    if Math.abs(dx) > Math.abs(dy) { // landscape
         xmin = map_inv(x_mapper, x);
         xmax = map_inv(x_mapper, x + width);
         dxdp := (xmax-xmin)/width;
+        if flip_y then dxdp = -dxdp;
         ymin = -dxdp*height*0.5 + y0;
         ymax =  dxdp*height*0.5 + y0;
-    } else {
+    } else { // portrait
         ymin = map_inv(y_mapper, y);
         ymax = map_inv(y_mapper, y + height);
         dydp := (ymax-ymin)/height;
@@ -796,8 +798,8 @@ equal_scaling :: (using axis: *CartesianAxis2D) {
         mapper_linear(), 
         ymin, 
         ymax, 
-        y, 
-        y + height
+        y         , //ifx flip_y then y          else y + height, 
+        y + height  //ifx flip_y then y + height else y
     );
 }
 fit_into_rectangle :: (using ax: *CartesianAxis2D, r: Rectangle) {
@@ -833,7 +835,11 @@ fit_data :: (using ax: *CartesianAxis2D, overwrite_constraints: bool = false) {
 
     using inner_rect;
     fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
-    fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
+    if !flip_y {
+        fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
+    } else {
+        fit_bounds(y_mapper, min_y, max_y, y+height, y, overwrite_constraints);
+    }
 }
 map :: (using ax: *CartesianAxis2D) {
     for *datasets {
@@ -871,7 +877,8 @@ draw :: (using ax: *CartesianAxis2D) {
         #if x_axis {
             mi := map_inv(x_mapper, inner_rect.x                   );
             ma := map_inv(x_mapper, inner_rect.x + inner_rect.width);
-            // ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
+            if mi > ma { mi, ma = swap(mi, ma); }
+
             if get_inner_type(x_mapper) == {
                 case .LINEAR;
                     xticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
@@ -881,7 +888,8 @@ draw :: (using ax: *CartesianAxis2D) {
         } else {
             mi := map_inv(y_mapper, inner_rect.y                    );
             ma := map_inv(y_mapper, inner_rect.y + inner_rect.height);
-            // ticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
+            if mi > ma { mi, ma = swap(mi, ma); }
+
             if get_inner_type(y_mapper) == {
                 case .LINEAR;
                     yticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
@@ -890,7 +898,6 @@ draw :: (using ax: *CartesianAxis2D) {
             }
         }
 
-        // draw lines
         #if x_axis {
             ticks := xticks;
         } else {
@@ -964,17 +971,17 @@ draw :: (using ax: *CartesianAxis2D) {
         }
 
         if show_tick_labels_left || show_tick_labels_right {
-            yend : s32 = -1;
+            yend : float32;
             for yticks {
                 ty := map(y_mapper, it);
+                if ty + font_size > y+height || ty < y then continue;
+
                 label := sprint("%", formatFloat(it, trailing_width=2, mode=.SCIENTIFIC));
                 defer free(label);
                 
                 text_width := MeasureText(label,font_size);
 
-                if ty + font_size > y+height then break;
-
-                if yend+tick_padding < cast(s32)ty {
+                if it_index == 0 || Math.abs(ty-yend) > cast(float32)tick_padding {
                     if show_tick_labels_left {
                         DrawLineEx(vec2(x-tick_length, ty), vec2(x, ty), tick_thickness, BLACK);
                         DrawText(label,cast(s32)(x-text_width-x_padding),cast(s32)ty,font_size,BLACK);
@@ -983,7 +990,7 @@ draw :: (using ax: *CartesianAxis2D) {
                         DrawLineEx(vec2(x+width, ty), vec2(x+width+tick_length, ty), tick_thickness, BLACK);
                         DrawText(label,cast(s32)(x+width+x_padding),cast(s32)ty,font_size,BLACK);
                     }
-                    yend = cast(s32)ty+font_size;
+                    yend = ty;
                 }
             }
         }
@@ -1144,7 +1151,7 @@ mouse_dragging :: (using axis: *CartesianAxis2D) -> *Mouse_State_Dragging {
     my := ifx y_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)y_mapper).inner else y_mapper;
     res.old_x = map_inv(mx, cast(float32)res.x);
     res.old_y = map_inv(my, cast(float32)res.y);
-    
+
     x_mapper = mapper_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
     y_mapper = mapper_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
     
