@@ -603,7 +603,7 @@ Axis_Type :: enum u8 {
     CARTESIAN_2D;
 }
 Axis :: struct {
-    rectangle: Rectangle;
+    axis_rectangle: Rectangle;
     axis_type: Axis_Type;
     datasets: [..]Data2D;
 }
@@ -715,8 +715,10 @@ CartesianAxis2D :: struct {
     show_tick_labels_top   : bool = true;
     show_tick_labels_bottom: bool = true;
     hide_overflow: bool = true;
+    show_gui: bool = true;
+    gui_padding: float32 = 50.0;
 
-    axis_padding := Vector4.{70.0, 50.0, 70.0, 50.0}; // left, bottom, right, top
+    axis_padding := Vector4.{70.0, 30.0, 70.0, 30.0}; // left, bottom, right, top
 
     font_size : s32 = 10;
     tick_length := 5;
@@ -728,7 +730,7 @@ CartesianAxis2D :: struct {
 cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *CartesianAxis2D {
     res := New(CartesianAxis2D);
     res.axis_type = .CARTESIAN_2D;
-    res.rectangle = WINDOW_RECT;
+    res.axis_rectangle = WINDOW_RECT;
     res.datasets  = NewResizableArray(0, Data2D);
     
     res.x_mapper = ifx x_mapper then x_mapper else mapper_linear();
@@ -809,11 +811,14 @@ equal_scaling :: (using axis: *CartesianAxis2D) {
     );
 }
 fit_into_rectangle :: (using ax: *CartesianAxis2D, r: Rectangle) {
-    rectangle = r;
+    axis_rectangle = r;
+
+    gp := ifx show_gui then gui_padding else 0.0;
+
     inner_rect.x = r.x + axis_padding.x;
-    inner_rect.y = r.y + axis_padding.y;
+    inner_rect.y = r.y + axis_padding.y + gp;
     inner_rect.width  = r.width  - (axis_padding.x + axis_padding.z);
-    inner_rect.height = r.height - (axis_padding.y + axis_padding.w);
+    inner_rect.height = r.height - (axis_padding.y + axis_padding.w + gp);
 }
 fit_bounds :: (using ax: *CartesianAxis2D, gui_rect: Rectangle, overwrite_constraints : bool = false) {
     min_x := map_inv(x_mapper, gui_rect.x);
@@ -876,7 +881,6 @@ update_and_draw :: (ax: *CartesianAxis2D) {
     draw(ax);
 }
 draw :: (using ax: *CartesianAxis2D) {
-
     grid_div := 10.0;
     min_grid_gap_px := 20.0;
 
@@ -983,7 +987,7 @@ draw :: (using ax: *CartesianAxis2D) {
         }
 
         if show_tick_labels_left || show_tick_labels_right {
-            yend : float32;
+            yend : float32 = 0.0;
             for yticks {
                 ty := map(y_mapper, it);
                 if ty + font_size > y+height || ty < y then continue;
@@ -1035,6 +1039,31 @@ draw :: (using ax: *CartesianAxis2D) {
 
     if show_frame {
         DrawRectangleLinesEx(inner_rect, 2.0, BLACK);
+    }
+
+
+    if show_gui {
+        button_height := 20.0;
+        button_width  := 50.0;
+        button_y := gui_padding*0.5-button_height*0.5;
+
+        r := rectangle(inner_rect.x,button_y,button_width,button_height);
+        if gui_button(r, "reset") {
+            print("reset\n");
+            reset(ax);
+        }
+
+        r.x += button_height + button_width;
+        if gui_button(r, "1:1") {
+            print("1:1\n");
+            equal_scaling(ax);
+        }
+
+        r.x += button_height + button_width;
+        if gui_button(r, "fit") {
+            print("fit\n");
+            fit_data(ax, true);
+        }
     }
 }
 
@@ -1305,28 +1334,6 @@ plot_render :: (_thread: *Thread = null) -> s64 {
         }
 
         update_mouse();
-        
-
-        rect := rectangle(20.0,15.0,50.0,20.0);
-        if gui_button(rect, "reset") {
-            print("reset\n");
-            reset(_plot.axes[0]);
-        }
-
-        rect.x += 50.0 + 20.0;
-        if gui_button(rect, "1:1") {
-            print("1:1\n");
-            if _plot.axes[0].axis_type == .CARTESIAN_2D {
-                ax := cast(*CartesianAxis2D)_plot.axes[0];
-                equal_scaling(ax);
-            }
-        }
-
-        rect.x += 50.0 + 20.0;
-        if gui_button(rect, "fit") {
-            print("fit\n");
-            fit_data(_plot.axes[0], true);
-        }
     }
 
     return 0; // what is this for?
