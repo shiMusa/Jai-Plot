@@ -27,6 +27,8 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding: Vector4) {
 
 
 
+
+
 gui_button :: (
     rect: Rectangle, 
     text := "", 
@@ -589,6 +591,55 @@ ticks_logarithmic :: (min_x: float32, max_x: float32, $$base: float32=10.0) -> [
 
 
 
+// ########     ###     ######   ########
+// ##     ##   ## ##   ##    ##  ##
+// ##     ##  ##   ##  ##        ##
+// ########  ##     ## ##   #### ######
+// ##        ######### ##    ##  ##
+// ##        ##     ## ##    ##  ##
+// ##        ##     ##  ######   ########
+
+Page_Type :: enum u8 {
+    SINGLE;
+}
+Page :: struct {
+    page_rectangle: Rectangle;
+    page_type: Page_Type;
+}
+draw :: (page: *Page) {
+    if page.page_type == {
+        case .SINGLE;
+            p := cast(*Page_Single)page;
+            draw(p);
+    }
+}
+intersection_axis :: (page: *Page, pos: Vector2) -> *Axis {
+    if page.page_type == {
+        case .SINGLE;
+            p := cast(*Page_Single)page;
+            return cast(*Axis)intersection_axis(p, pos);
+    }
+}
+
+Page_Single :: struct {
+    using _page: Page;
+    axis: *Axis;
+}
+page_single :: (axis: *Axis) -> *Page_Single {
+    res := New(Page_Single);
+    res.page_type = .SINGLE;
+    res.axis = axis;
+    return res;
+}
+draw :: (page: *Page_Single) {
+    update_and_draw(page.axis);
+}
+intersection_axis :: inline (using page: *Page_Single, pos: Vector2) -> *Axis {
+    return ifx intersection_axis(axis, pos) then axis else null;
+}
+
+
+
 
 
 //    ###    ##     ## ####  ######
@@ -606,6 +657,13 @@ Axis :: struct {
     axis_rectangle: Rectangle;
     axis_type: Axis_Type;
     datasets: [..]Data2D;
+}
+intersection_axis :: (ax: *Axis, pos: Vector2) -> bool {
+    if ax.axis_type == {
+        case .CARTESIAN_2D;
+            ca := cast(*CartesianAxis2D)ax;
+            return intersection_axis(ca, pos);
+    }
 }
 update_and_draw :: (ax: *Axis) {
     if ax.axis_type == {
@@ -649,10 +707,20 @@ fit_bounds :: (ax: *Axis, gui_rect: Rectangle, overwrite_constraints : bool = fa
             fit_bounds(ca, gui_rect, overwrite_constraints);
     }
 }
-
-
-
-
+mouse_dragging :: (ax: *Axis) -> *Mouse_State_Dragging {
+    if ax.axis_type == {
+        case .CARTESIAN_2D;
+            ca := cast(*CartesianAxis2D)ax;
+            return mouse_dragging(ca);
+    }
+}
+mouse_rmb_dragging :: (ax: *Axis) -> *Mouse_State_RMB_Dragging {
+    if ax.axis_type == {
+        case .CARTESIAN_2D;
+            ca := cast(*CartesianAxis2D)ax;
+            return mouse_rmb_dragging(ca);
+    }
+}
 bounds_x :: (using ax: *Axis) -> float32, float32 {
     assert(datasets.count > 0);
     _min, _max := bounds_x(datasets[0]);
@@ -750,6 +818,9 @@ reset :: (axis: *CartesianAxis2D) {
     }
     axis.x_mapper = clone(axis.original_x_mapper);
     axis.y_mapper = clone(axis.original_y_mapper);
+}
+intersection_axis :: inline (axis: *CartesianAxis2D, pos: Vector2) -> bool {
+    return CheckCollisionPointRec(pos, axis.inner_rect);
 }
 zoom :: (using axis: *CartesianAxis2D, wheel: float32) {
     using inner_rect;
@@ -874,6 +945,35 @@ map :: (using ax: *CartesianAxis2D) {
         }
     }
 }
+mouse_dragging :: (using axis: *CartesianAxis2D) -> *Mouse_State_Dragging {
+    using inner_rect;
+
+    res := New(Mouse_State_Dragging);
+    res.type = .DRAGGING;
+    res.x = GetMouseX();
+    res.y = GetMouseY();
+    res.axis = axis;
+
+    mx := ifx x_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)x_mapper).inner else x_mapper;
+    my := ifx y_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)y_mapper).inner else y_mapper;
+    res.old_x = map_inv(mx, cast(float32)res.x);
+    res.old_y = map_inv(my, cast(float32)res.y);
+
+    x_mapper = mapper_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
+    y_mapper = mapper_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
+    
+    return res;
+}
+mouse_rmb_dragging :: (axis: *CartesianAxis2D) -> *Mouse_State_RMB_Dragging {
+    res := New(Mouse_State_RMB_Dragging);
+    res.type = .RMB_DRAGGING;
+    res.x = GetMouseX();
+    res.y = GetMouseY();
+    res.axis = axis;
+    res.old_x = res.x;
+    res.old_y = res.y;
+    return res;
+}
 update_and_draw :: (ax: *CartesianAxis2D) {
     fit_into_rectangle(ax, WINDOW_RECT);//, vec4(80.0,70.0,80.0,50.0));
     fit_data(ax);
@@ -941,16 +1041,18 @@ draw :: (using ax: *CartesianAxis2D) {
         }
     }
 
+    if hide_overflow then BeginScissorMode(cast(s32)inner_rect.x, cast(s32)inner_rect.y, cast(s32)inner_rect.width, cast(s32)inner_rect.height);
     for datasets {
         draw(it);
     }
+    if hide_overflow then EndScissorMode();
 
-    if hide_overflow {
-        DrawRectangleV(vec2(0.0,0.0), vec2(inner_rect.width, inner_rect.y), RAYWHITE);
-        DrawRectangleV(vec2(0.0, inner_rect.y+inner_rect.height), vec2(WINDOW_RECT.width, WINDOW_RECT.height), RAYWHITE);
-        DrawRectangleV(vec2(0.0,0.0), vec2(inner_rect.x, WINDOW_RECT.height), RAYWHITE);
-        DrawRectangleV(vec2(inner_rect.x+inner_rect.width,0.0), vec2(WINDOW_RECT.width, WINDOW_RECT.height), RAYWHITE);
-    }
+    // if hide_overflow {
+    //     DrawRectangleV(vec2(0.0,0.0), vec2(inner_rect.width, inner_rect.y), RAYWHITE);
+    //     DrawRectangleV(vec2(0.0, inner_rect.y+inner_rect.height), vec2(WINDOW_RECT.width, WINDOW_RECT.height), RAYWHITE);
+    //     DrawRectangleV(vec2(0.0,0.0), vec2(inner_rect.x, WINDOW_RECT.height), RAYWHITE);
+    //     DrawRectangleV(vec2(inner_rect.x+inner_rect.width,0.0), vec2(WINDOW_RECT.width, WINDOW_RECT.height), RAYWHITE);
+    // }
 
     if show_grid {
         draw_gridlines(true , 0.0, Color.{ 130, 130, 130, 125 }, 1.5);
@@ -1096,39 +1198,22 @@ update_mouse :: () {
     if IsMouseButtonDown(0) && _mouse.type == .FREE {
         print("dragging\n");
         // free(_mouse);
-        x := cast(float32)GetMouseX();
-        y := cast(float32)GetMouseY();
-
-        for _plot.axes {
-            if it.axis_type == {
-                case .CARTESIAN_2D;
-                    ca := cast(*CartesianAxis2D)it;
-                    if CheckCollisionPointRec(vec2(x, y), ca.inner_rect) {
-                        _mouse = mouse_dragging(ca);
-                    }
-            }
-        }
+        v := vec2(cast(float32)GetMouseX(), cast(float32)GetMouseY());
+        ax := intersection_axis(_plot.active_page, v);
+        if ax then _mouse = mouse_dragging(ax);
     } else if !IsMouseButtonDown(0) && _mouse.type == .DRAGGING {
         print("stop dragging\n");
         md := cast(*Mouse_State_Dragging)_mouse;
         _mouse = cast(*Mouse_State)mouse_stop_dragging(md);
     } else if IsMouseButtonDown(1) && _mouse.type == .FREE {
         print("rmb dragging\n");
-        x := cast(float32)GetMouseX();
-        y := cast(float32)GetMouseY();
+        v := vec2(cast(float32)GetMouseX(), cast(float32)GetMouseY());
+        ax := intersection_axis(_plot.active_page, v);
+        if ax then _mouse = mouse_rmb_dragging(ax);
 
-        for _plot.axes {
-            if it.axis_type == {
-                case .CARTESIAN_2D;
-                    ca := cast(*CartesianAxis2D)it;
-                    if CheckCollisionPointRec(vec2(x,y), ca.inner_rect) {
-                        _mouse = mouse_rbm_dragging(ca);
-                    }
-            }
-        }
     } else if !IsMouseButtonDown(1) && _mouse.type == .RMB_DRAGGING {
         print("stop rmb dragging\n");
-        md := cast(*Mouse_State_RBM_Dragging)_mouse;
+        md := cast(*Mouse_State_RMB_Dragging)_mouse;
         _mouse = cast(*Mouse_State)mouse_stop_dragging(md);
     }
 
@@ -1143,7 +1228,7 @@ update_mouse :: () {
             md := cast(*Mouse_State_Dragging)_mouse;
             update(md);
         case .RMB_DRAGGING;
-            md := cast(*Mouse_State_RBM_Dragging)_mouse;
+            md := cast(*Mouse_State_RMB_Dragging)_mouse;
             update(md);
     }
 }
@@ -1160,17 +1245,11 @@ mouse_free :: () -> *Mouse_State_Free {
 }
 update :: (using mouse: *Mouse_State_Free) {
     wheel := GetMouseWheelMove();
+    if wheel == 0.0 then return;
+
     mv := vec2(cast(float32)x, cast(float32)y);
-    for _plot.axes {
-        if it.axis_type == {
-            case .CARTESIAN_2D;
-                ca := cast(*CartesianAxis2D)it;
-                if CheckCollisionPointRec(mv, ca.inner_rect) && wheel != 0.0 {
-                    // print("zoom %\n", wheel);
-                    zoom(ca, wheel);
-                }
-        }
-    }
+    ax := intersection_axis(_plot.active_page, mv);
+    if ax then zoom(ax, wheel);
 }
 
 Mouse_State_Dragging :: struct {
@@ -1179,25 +1258,7 @@ Mouse_State_Dragging :: struct {
     old_y: float32 = 0.0;
     axis: *CartesianAxis2D;
 }
-mouse_dragging :: (using axis: *CartesianAxis2D) -> *Mouse_State_Dragging {
-    using inner_rect;
 
-    res := New(Mouse_State_Dragging);
-    res.type = .DRAGGING;
-    res.x = GetMouseX();
-    res.y = GetMouseY();
-    res.axis = axis;
-
-    mx := ifx x_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)x_mapper).inner else x_mapper;
-    my := ifx y_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)y_mapper).inner else y_mapper;
-    res.old_x = map_inv(mx, cast(float32)res.x);
-    res.old_y = map_inv(my, cast(float32)res.y);
-
-    x_mapper = mapper_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
-    y_mapper = mapper_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
-    
-    return res;
-}
 update :: (using mouse: *Mouse_State_Dragging) {
     mx := cast(*Mapper_Constraint)axis.x_mapper;
     my := cast(*Mapper_Constraint)axis.y_mapper;
@@ -1213,22 +1274,12 @@ mouse_stop_dragging :: (using mouse: *Mouse_State_Dragging) -> *Mouse_State_Free
 
 
 
-Mouse_State_RBM_Dragging :: struct {
+Mouse_State_RMB_Dragging :: struct {
     using mouse_state: Mouse_State;
     old_x, old_y: s32;
     axis: *CartesianAxis2D;
 }
-mouse_rbm_dragging :: (axis: *CartesianAxis2D) -> *Mouse_State_RBM_Dragging {
-    res := New(Mouse_State_RBM_Dragging);
-    res.type = .RMB_DRAGGING;
-    res.x = GetMouseX();
-    res.y = GetMouseY();
-    res.axis = axis;
-    res.old_x = res.x;
-    res.old_y = res.y;
-    return res;
-}
-update :: (using mouse: *Mouse_State_RBM_Dragging) {
+update :: (using mouse: *Mouse_State_RMB_Dragging) {
     x = GetMouseX();
     y = GetMouseY();
 
@@ -1250,7 +1301,7 @@ update :: (using mouse: *Mouse_State_RBM_Dragging) {
 
     DrawRectangleLinesEx(rectangle(rx,ry,rwidth,rheight), 2.0, RED);
 }
-mouse_stop_dragging :: (using mouse: *Mouse_State_RBM_Dragging) -> *Mouse_State_Free {
+mouse_stop_dragging :: (using mouse: *Mouse_State_RMB_Dragging) -> *Mouse_State_Free {
     m := mouse;
     defer free(m);
 
@@ -1287,7 +1338,8 @@ mouse_stop_dragging :: (using mouse: *Mouse_State_RBM_Dragging) -> *Mouse_State_
 
 Plot :: struct {
     thread: *Thread;
-    axes: [..]*Axis;
+    pages: [..]*Page;
+    active_page: *Page;
     active_axis: *Axis;
     running: bool = false;
 }
@@ -1300,7 +1352,7 @@ plot :: (msaa : bool = true, highdpi: bool = false) {
     if msaa    then flags |= ConfigFlags.MSAA_4X_HINT;
     SetConfigFlags(xx flags);
 
-    _plot.axes = NewResizableArray(0, *Axis);
+    _plot.pages = NewResizableArray(0, *Page);
     _plot.thread = New(Thread);
     thread_init(_plot.thread, plot_render);
     thread_start(_plot.thread);
@@ -1329,8 +1381,8 @@ plot_render :: (_thread: *Thread = null) -> s64 {
         ClearBackground(RAYWHITE);
         Mode2D(camera);
 
-        for _plot.axes {
-            update_and_draw(it);
+        for _plot.pages {
+            draw(it);
         }
 
         update_mouse();
@@ -1339,18 +1391,13 @@ plot_render :: (_thread: *Thread = null) -> s64 {
     return 0; // what is this for?
 }
 
-
-add_axis :: (ax: *Axis) -> int {
-    array_add(*_plot.axes, ax);
-    _plot.active_axis = ax;
-    return _plot.axes.count-1;
+add_page :: (p: *$P/Page) {
+    array_add(*_plot.pages, cast(*Page)p);
+    _plot.active_page = cast(*Page)p;
 }
 
-axis :: (id: int) {
-    _plot.active_axis = _plot.axes[id];
-}
-axis :: (ax: *Axis) {
-    _plot.active_axis = ax;
+activate :: (axis: *$A/Axis) {
+    _plot.active_axis = cast(*Axis)axis;
 }
 
 plot2d :: (
