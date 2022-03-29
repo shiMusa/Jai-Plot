@@ -481,7 +481,7 @@ fit :: (using ml: *Mapper_Logarithmic, x: float32, y: float32) {
     fit(mapper_linear, Math.log(x)*invlogbase, y);
 }
 fit_bounds :: (using ml: *Mapper_Logarithmic, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
-    if min_x < 0.0 then return;
+    if min_x <= 0.0 then return;
     if Math.isinf(max_x) then return;
     fit_bounds(
         mapper_linear, 
