@@ -1,3 +1,6 @@
+
+#scope_module
+
 #import "Windows";
 #import "Basic";
 Math :: #import "Math";
@@ -87,6 +90,8 @@ Style2D_Line :: struct {
     color: Color;
     thickness: float32;
 }
+
+#scope_export
 line :: (color: Color = RED, thickness: float32 = 2.0) -> *Style2D_Line {
     res := New(Style2D_Line);
     res.type = .LINE;
@@ -94,15 +99,18 @@ line :: (color: Color = RED, thickness: float32 = 2.0) -> *Style2D_Line {
     res.thickness = thickness;
     return res;
 }
-
+#scope_module
 
 SYMBOL_SIZE :: 128;
+
+#scope_export
 Symbols :: enum u8 {
     CIRCLE :: 0;
     SQUARE :: 1;
     PLUS   :: 2;
     X      :: 3;
 }
+#scope_module
 symbol_render_textures : [4]RenderTexture2D;
 init_symbol_texture :: () {
     for *symbol_render_textures {
@@ -133,6 +141,7 @@ Style2D_Symbols :: struct {
     size: float32;
     symbol: Symbols;
 }
+#scope_export
 symbols :: (symbol := Symbols.CIRCLE, color := RED, size: float32 = 4.0, symbol_resolution: s32 = 32) -> *Style2D_Symbols {
     res := New(Style2D_Symbols);
     res.type = .SYMBOLS;
@@ -141,6 +150,7 @@ symbols :: (symbol := Symbols.CIRCLE, color := RED, size: float32 = 4.0, symbol_
     res.symbol = symbol;
     return res;
 }
+#scope_module
 
 
 
@@ -148,22 +158,26 @@ Style2D_Bars :: struct {
     using _s: Style2D;
     color: Color;
 }
+#scope_export
 bars :: (color: Color) -> *Style2D_Bars {
     res := New(Style2D_Bars);
     res.type = .BARS;
     res.color = color;
     return res;
 }
+#scope_module
 Style2D_Multi :: struct {
     using _s: Style2D;
     styles: []*Style2D;
 }
+#scope_export
 multi :: (styles: ..*Style2D) -> *Style2D_Multi {
     res := New(Style2D_Multi);
     res.type = .MULTI;
     res.styles = styles;
     return res;
 }
+#scope_module
 
 
 
@@ -384,11 +398,12 @@ fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y
 
 
 
-
+#scope_export
 Mapper_Linear :: struct {
     using _m : Mapper;
     y0, dydx : float32;
 }
+#scope_module
 clone :: (m: *Mapper_Linear) -> *Mapper_Linear {
     res := New(Mapper_Linear);
     res.type = .LINEAR;
@@ -396,6 +411,7 @@ clone :: (m: *Mapper_Linear) -> *Mapper_Linear {
     res.dydx = m.dydx;
     return res;
 }
+#scope_export
 mapper_linear :: (y0: float = 0.0, dydx: float32 = 1.0) -> *Mapper_Linear {
     res := New(Mapper_Linear);
     res.type = .LINEAR;
@@ -409,6 +425,7 @@ mapper_linear :: (min_x: float32, max_x: float32, min_y: float32, max_y: float32
     fit_bounds(res, min_x, max_x, min_y, max_y);
     return res;
 }
+#scope_module
 map :: inline (using lm: *Mapper_Linear, x: float32) -> float32 {
     return y0 + dydx * x;
 }
@@ -427,13 +444,14 @@ fit_bounds :: (using lm: *Mapper_Linear, min_x: float32, max_x: float32, min_y: 
 
 
 
-
+#scope_export
 Mapper_Logarithmic :: struct {
     using mapper: Mapper;
     mapper_linear: *Mapper_Linear;
     base: float32;
     invlogbase: float32;
 }
+#scope_module
 clone :: (m: *Mapper_Logarithmic) -> *Mapper_Logarithmic {
     res := New(Mapper_Logarithmic);
     res.type = .LOGARITHMIC;
@@ -442,6 +460,7 @@ clone :: (m: *Mapper_Logarithmic) -> *Mapper_Logarithmic {
     res.invlogbase = m.invlogbase;
     return res;
 }
+#scope_export
 mapper_logarithmic :: (base: float32 = 10.0) -> *Mapper_Logarithmic {
     res := New(Mapper_Logarithmic);
     res.type = .LOGARITHMIC;
@@ -450,6 +469,7 @@ mapper_logarithmic :: (base: float32 = 10.0) -> *Mapper_Logarithmic {
     res.invlogbase = 1.0/Math.log(base);
     return res;
 }
+#scope_module
 map :: inline (using ml: *Mapper_Logarithmic, x: float32) -> float32 {
     // if x <= 0.0 then return Math.FLOAT32_MIN;
     return map(mapper_linear, Math.log(x) * invlogbase);
@@ -475,7 +495,7 @@ fit_bounds :: (using ml: *Mapper_Logarithmic, min_x: float32, max_x: float32, mi
 
 
 
-
+#scope_export
 Mapper_Constraint :: struct {
     using _m: Mapper;
     inner: *Mapper;
@@ -483,6 +503,7 @@ Mapper_Constraint :: struct {
     fixed_min_x, fixed_max_x, fixed_min_y, fixed_max_y: bool = false;
     min_x, max_x, min_y, max_y : float32;
 }
+#scope_module
 clone :: (m: *Mapper_Constraint) -> *Mapper_Constraint {
     res := New(Mapper_Constraint);
     res.type = .CONSTRAINT; 
@@ -497,6 +518,7 @@ clone :: (m: *Mapper_Constraint) -> *Mapper_Constraint {
     res.max_y = m.max_y;
     return res;
 }
+#scope_export
 mapper_constraint :: (
     inner: *Mapper, 
     min_x: float32 = Math.FLOAT32_NAN,
@@ -515,6 +537,7 @@ mapper_constraint :: (
 
     return res;
 }
+#scope_module
 map :: inline (using cm: *Mapper_Constraint, x: float32) -> float32 {
     return map(inner, x);
 }
@@ -625,12 +648,14 @@ Page_Single :: struct {
     using _page: Page;
     axis: *Axis;
 }
+#scope_export
 page_single :: (axis: *Axis) -> *Page_Single {
     res := New(Page_Single);
     res.page_type = .SINGLE;
     res.axis = axis;
     return res;
 }
+#scope_module
 draw :: (page: *Page_Single) {
     fit_into_rectangle(page.axis, page.page_rectangle);
     update_and_draw(page.axis);
@@ -763,7 +788,7 @@ bounds_extra :: (using ax: *Axis, index: int) -> float32, float32 {
 
 
 
-
+#scope_export
 CartesianAxis2D :: struct {
     using _axis: Axis;
 
@@ -810,6 +835,7 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *Ca
 
     return res;
 }
+#scope_module
 reset :: (axis: *CartesianAxis2D) {
     xm := axis.x_mapper;
     ym := axis.y_mapper;
@@ -1348,6 +1374,7 @@ Plot :: struct {
 _plot : Plot;
 
 _empty :: () {}
+#scope_export
 plot :: (msaa : bool = true, highdpi: bool = false, callback: ()->() = _empty) {
     flags := ConfigFlags.WINDOW_RESIZABLE;
     if highdpi then flags |= ConfigFlags.WINDOW_HIGHDPI;
@@ -1370,7 +1397,7 @@ plot :: (msaa : bool = true, highdpi: bool = false, callback: ()->() = _empty) {
         sleep_milliseconds(10);
     }
 }
-
+#scope_module
 plot_render :: () {
     Window(cast(s32)WINDOW_RECT.width, cast(s32)WINDOW_RECT.height, "Jai Plot");
     SetTargetFPS(60);
@@ -1417,7 +1444,7 @@ plot_render :: () {
 
     _plot.callback(); 
 }
-
+#scope_export
 add_page :: (p: *$P/Page) {
     array_add(*_plot.pages, cast(*Page)p);
     _plot.active_page = cast(*Page)p;

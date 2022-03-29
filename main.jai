@@ -1,5 +1,6 @@
 #import "Basic";
-#load "module.jai";
+Math :: #import "Math";
+#import "Jai-Plot";
 
 
 
