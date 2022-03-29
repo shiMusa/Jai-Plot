@@ -85,12 +85,16 @@ Style2D_Type :: enum u8 {
     BARS;
     MULTI;
 }
+
+
+
+
+
 Style2D_Line :: struct {
     using _s: Style2D;
     color: Color;
     thickness: float32;
 }
-
 #scope_export
 line :: (color: Color = RED, thickness: float32 = 2.0) -> *Style2D_Line {
     res := New(Style2D_Line);
@@ -100,6 +104,11 @@ line :: (color: Color = RED, thickness: float32 = 2.0) -> *Style2D_Line {
     return res;
 }
 #scope_module
+
+
+
+
+
 
 SYMBOL_SIZE :: 128;
 
@@ -154,6 +163,11 @@ symbols :: (symbol := Symbols.CIRCLE, color := RED, size: float32 = 4.0, symbol_
 
 
 
+
+
+
+
+
 Style2D_Bars :: struct {
     using _s: Style2D;
     color: Color;
@@ -165,6 +179,13 @@ bars :: (color: Color) -> *Style2D_Bars {
     res.color = color;
     return res;
 }
+
+
+
+
+
+
+
 #scope_module
 Style2D_Multi :: struct {
     using _s: Style2D;
@@ -1093,7 +1114,7 @@ draw :: (using ax: *CartesianAxis2D) {
             xend : s32 = -1;
             for xticks {
                 tx := map(x_mapper, it);
-                label := sprint("%", formatFloat(it, trailing_width=2, mode=.SCIENTIFIC));
+                label := sprint("%", formatFloat(it, trailing_width=4, mode=.SHORTEST));
                 defer free(label);
                 
                 text_width := MeasureText(label,font_size);
@@ -1120,7 +1141,7 @@ draw :: (using ax: *CartesianAxis2D) {
                 ty := map(y_mapper, it);
                 if ty + font_size > y+height || ty < y then continue;
 
-                label := sprint("%", formatFloat(it, trailing_width=2, mode=.SCIENTIFIC));
+                label := sprint("%", formatFloat(it, trailing_width=4, mode=.SHORTEST));
                 defer free(label);
                 
                 text_width := MeasureText(label,font_size);
