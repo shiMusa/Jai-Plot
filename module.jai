@@ -822,6 +822,10 @@ CartesianAxis2D :: struct {
     y_mapper: *Mapper;
     flip_y: bool = true;
 
+    title  : string;
+    x_label: string;
+    y_label: string;
+
     show_frame: bool = true;
     show_zero_lines: bool = true;
     show_grid: bool = true;
@@ -842,7 +846,7 @@ CartesianAxis2D :: struct {
     x_padding := 8;
     tick_padding := 5;
 }
-cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *CartesianAxis2D {
+cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null, title:="", x_label:="", y_label:="") -> *CartesianAxis2D {
     res := New(CartesianAxis2D);
     res.axis_type = .CARTESIAN_2D;
     res.axis_rectangle = WINDOW_RECT;
@@ -850,6 +854,10 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null) -> *Ca
     
     res.x_mapper = ifx x_mapper then x_mapper else mapper_linear();
     res.y_mapper = ifx y_mapper then y_mapper else mapper_linear();
+
+    res.title   = title;
+    res.x_label = x_label;
+    res.y_label = y_label;
 
     res.original_x_mapper = clone(res.x_mapper);
     res.original_y_mapper = clone(res.y_mapper);
@@ -932,12 +940,12 @@ equal_scaling :: (using axis: *CartesianAxis2D) {
 fit_into_rectangle :: (using ax: *CartesianAxis2D, r: Rectangle) {
     axis_rectangle = r;
 
-    gp := ifx show_gui then gui_padding else 0.0;
+    top_padding := ifx title == "" then 0.0 else 2.0*2.0*font_size;
 
     inner_rect.x = r.x + axis_padding.x;
-    inner_rect.y = r.y + axis_padding.y + gp;
+    inner_rect.y = r.y + axis_padding.y + top_padding;
     inner_rect.width  = r.width  - (axis_padding.x + axis_padding.z);
-    inner_rect.height = r.height - (axis_padding.y + axis_padding.w + gp);
+    inner_rect.height = r.height - (axis_padding.y + axis_padding.w + top_padding);
 }
 fit_bounds :: (using ax: *CartesianAxis2D, gui_rect: Rectangle, overwrite_constraints : bool = false) {
     min_x := map_inv(x_mapper, gui_rect.x);
@@ -1194,13 +1202,19 @@ draw :: (using ax: *CartesianAxis2D) {
         DrawRectangleLinesEx(inner_rect, 2.0, BLACK);
     }
 
+    if title != "" {
+        fs := 2*font_size;
+        text_width := MeasureText(title, fs);
+        x := inner_rect.x + 0.5*inner_rect.width - text_width*0.5;
+        DrawText(title, cast(s32)x, cast(s32)axis_rectangle.y + cast(s32)(0.5*fs), fs, BLACK);
+    }
 
     if show_gui {
         button_height := 20.0;
         button_width  := 50.0;
-        button_y := gui_padding*0.5-button_height*0.5;
+        button_y := axis_rectangle.y + button_height;
 
-        r := rectangle(inner_rect.x,button_y,button_width,button_height);
+        r := rectangle(inner_rect.x + button_height,button_y,button_width,button_height);
         if gui_button(r, "reset") {
             print("reset\n");
             reset(ax);

@@ -55,11 +55,11 @@ cy : [361]float32;
 
 main :: () {
 
-    plot(highdpi=true, callback=stop);
+    plot(highdpi=false, callback=stop);
 
     x_mapper := mapper_constraint(mapper_logarithmic(), min_x = 0.1, max_x = 100.0);
     y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
-    axis := cartesian_axis_2d(x_mapper, y_mapper);
+    axis := cartesian_axis_2d(x_mapper, y_mapper, "waves");
 
     add_page(page_single(axis));
     activate(axis);
