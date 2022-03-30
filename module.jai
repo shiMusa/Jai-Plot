@@ -1111,7 +1111,8 @@ draw :: (using ax: *CartesianAxis2D) {
         using inner_rect;
 
         if show_tick_labels_top || show_tick_labels_bottom {
-            xend : s32 = -1;
+            xend : float32 = 0.0;
+            first_tick : bool = false;
             for xticks {
                 tx := map(x_mapper, it);
                 label := sprint("%", formatFloat(it, trailing_width=4, mode=.SHORTEST));
@@ -1121,7 +1122,7 @@ draw :: (using ax: *CartesianAxis2D) {
 
                 if tx + text_width > x+width then break;
 
-                if xend+tick_padding < cast(s32)tx {
+                if !first_tick || Math.abs(tx-xend) > cast(float32)tick_padding {
                     if show_tick_labels_bottom {
                         DrawLineEx(vec2(tx, y+height), vec2(tx, y+height+tick_length), tick_thickness, BLACK);
                         DrawText(label,cast(s32)tx,cast(s32)(y+height+y_padding),font_size,BLACK);
@@ -1130,13 +1131,15 @@ draw :: (using ax: *CartesianAxis2D) {
                         DrawLineEx(vec2(tx, y-tick_length), vec2(tx, y), tick_thickness, BLACK);
                         DrawText(label,cast(s32)tx,cast(s32)(y-y_padding-font_size),font_size,BLACK);
                     }
-                    xend = cast(s32)tx+text_width;
+                    first_tick = true;
+                    xend = tx+text_width;
                 }
             }
         }
 
         if show_tick_labels_left || show_tick_labels_right {
             yend : float32 = 0.0;
+            first_tick : bool = false;
             for yticks {
                 ty := map(y_mapper, it);
                 if ty + font_size > y+height || ty < y then continue;
@@ -1146,7 +1149,7 @@ draw :: (using ax: *CartesianAxis2D) {
                 
                 text_width := MeasureText(label,font_size);
 
-                if it_index == 0 || Math.abs(ty-yend) > cast(float32)tick_padding {
+                if !first_tick || Math.abs(ty-yend) > cast(float32)tick_padding {
                     if show_tick_labels_left {
                         DrawLineEx(vec2(x-tick_length, ty), vec2(x, ty), tick_thickness, BLACK);
                         DrawText(label,cast(s32)(x-text_width-x_padding),cast(s32)ty,font_size,BLACK);
@@ -1155,6 +1158,7 @@ draw :: (using ax: *CartesianAxis2D) {
                         DrawLineEx(vec2(x+width, ty), vec2(x+width+tick_length, ty), tick_thickness, BLACK);
                         DrawText(label,cast(s32)(x+width+x_padding),cast(s32)ty,font_size,BLACK);
                     }
+                    first_tick = true;
                     yend = ty;
                 }
             }
