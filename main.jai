@@ -38,7 +38,6 @@ simulation :: () {
 
 
 stop_simulation : bool = false;
-stop :: () { stop_simulation = true; }
 
 N :: 201;
 NP :: 20;
@@ -55,7 +54,7 @@ cy : [361]float32;
 
 main :: () {
 
-    plot(highdpi=false, callback=stop);
+    plot(highdpi=false, callback= ()=>{ stop_simulation = true; } );
 
     x_mapper := mapper_constraint(mapper_logarithmic(), min_x = 0.1, max_x = 100.0);
     y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
