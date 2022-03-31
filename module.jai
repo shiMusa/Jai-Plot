@@ -31,10 +31,20 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding := Vector4.{
 
 
 EventType :: enum u8 {
+    MOUSE_POSITION;
     MOUSE_BUTTON;
 }
 
 _events: [..]*Event;
+
+reset_events :: () {
+    for _events {
+        free(it);
+    }
+    array_reset(*_events);
+}
+
+
 pop_event :: inline () -> *Event {
     i := _event.count-1;
     while _events[i] == null && i >= 0 {
@@ -61,10 +71,23 @@ Event :: struct {
 }
 
 
+EventMousePosition :: struct {
+    using event: Event;
+    pos: Vector2;
+}
+event_mouse_position :: (position: Vector2) -> *EventMousePosition {
+    res := New(EventMousePosition);
+    res.event_type = .MOUSE_POSITION;
+    res.pos = position;
+    return res;
+}
+
+
 ButtonEventType :: enum u8 {
     DOWN;
     UP;
-    CLICK;
+    PRESSED;
+    RELEASED;
 }
 EventMouseButton :: struct {
     using event: Event;
@@ -80,6 +103,8 @@ event_mouse_button :: (button: u8, position: Vector2, button_event_type: ButtonE
     res.button_event_type = button_event_type;
     res.pos = position;
     res.button = button;
+
+    return res;
 }
 
 
@@ -103,7 +128,8 @@ gui_button :: (
     text := "", 
     font_size : s32 = 10, 
     line_color := GREY, 
-    fill_color := RAYWHITE
+    fill_color := RAYWHITE,
+    consume_events := true
 ) -> bool {
     m := vec2(cast(float32)_mouse.x, cast(float32)_mouse.y);
     over := CheckCollisionPointRec(m, rect);
@@ -113,12 +139,38 @@ gui_button :: (
     tx := cast(s32)(rect.width  * 0.5 + rect.x - 0.5 * text_width);
     ty := cast(s32)(rect.height * 0.5 + rect.y - 0.5 * font_size );
 
-    if IsMouseButtonPressed(0) && over {
+    is_pressed := false;
+    is_over := false;
+
+    for *_events {
+        if <<it == null then continue;
+        used := false;
+
+        if (<<it).event_type == {
+            case .MOUSE_BUTTON;
+                e := cast(*EventMouseButton)<<it;
+                if CheckCollisionPointRec(e.pos, rect) {
+                    used = true;
+                    is_pressed |= e.button_event_type == .PRESSED;
+                }
+            case .MOUSE_POSITION;
+                e := cast(*EventMousePosition)<<it;
+                is_over |= CheckCollisionPointRec(e.pos, rect);
+                used = false;
+                
+        }
+        if consume_events && used {
+            free(<<it);
+            <<it = null;
+        }
+    }
+
+    if is_over && is_pressed {
         DrawRectangleRec(rect, fill_color * 0.5);
         DrawRectangleLinesEx(rect, 2.0, line_color);
         DrawText(text, tx, ty, font_size, BLACK);
         return true;
-    } else if over {
+    } else if is_over {
         DrawRectangleRec(rect, fill_color);
         DrawRectangleLinesEx(rect, 2.0, RED);
         DrawText(text, tx, ty, font_size, BLACK);
@@ -393,6 +445,35 @@ draw :: (data: Data2D) {
 // ##     ## ######### ##        ##        ##        ##       ##   ##
 // ##     ## ##     ## ##        ##        ##        ##       ##    ##
 // ##     ## ##     ## ##        ##        ##        ######## ##     ##
+
+
+// specialize :: (proc_name: string, general: Type, arguments: string, return_type: Type, enum_var_name: string,  specials: ..Type) -> string {
+//     builder : String_Builder;
+
+//     print_to_builder(*builder, "% :: (g: *%", proc_name, general);
+//     if arguments == "" then append(*builder, ") ") else
+//         print_to_builder(*builder, ", %) ", arguments);
+//     if return_type != void {
+//         print_to_builder(*builder, "-> % ", return_type);
+//     }
+//     append(*builder, "{\n");
+
+//     print_to_builder(*builder, "    if g.% == {\n");
+
+//     for specials {
+//         print_to_builder(*builder, "        case %.%;\n", it, enum_var_name);
+//         print_to_builder(*builder, "            s := cast(*%)g;\n", it);
+
+//         ret := ifx return_type == void then "" else " return";
+
+//         print_to_builder(*builder, "           % %(s, %);\n", ret, it, arguments);
+//     }
+
+//     append(*builder, "    }\n");
+//     append(*builder, "}\n");
+
+//     return builder_to_string(*builder);
+// }
 
 Mapper_Type :: enum u8 {
     LINEAR;
@@ -1281,19 +1362,19 @@ draw :: (using ax: *CartesianAxis2D) {
         button_y := axis_rectangle.y + button_height;
 
         r := rectangle(inner_rect.x + button_height,button_y,button_width,button_height);
-        if gui_button(r, "reset") {
+        if gui_button(r, "reset", consume_events=true) {
             print("reset\n");
             reset(ax);
         }
 
         r.x += button_height + button_width;
-        if gui_button(r, "1:1") {
+        if gui_button(r, "1:1", consume_events=true) {
             print("1:1\n");
             equal_scaling(ax);
         }
 
         r.x += button_height + button_width;
-        if gui_button(r, "fit") {
+        if gui_button(r, "fit", consume_events=true) {
             print("fit\n");
             fit_data(ax, true);
         }
@@ -1326,6 +1407,7 @@ Mouse_State :: struct {
 }
 
 update_mouse :: () {
+
     if IsMouseButtonDown(0) && _mouse.type == .FREE {
         print("dragging\n");
         // free(_mouse);
@@ -1503,6 +1585,69 @@ plot :: (msaa : bool = true, highdpi: bool = false, callback: ()->() = _empty) {
     }
 }
 #scope_module
+
+
+
+
+
+draw_plot :: () {
+    button_pane_width := 50.0;
+    page_button_pane := rectangle(0,0,button_pane_width,WINDOW_RECT.height);
+    page_pane := rectangle(button_pane_width,0,WINDOW_RECT.width-button_pane_width,WINDOW_RECT.height);
+
+    button_rect := rectangle(10.0,15.0,30.0,20.0);
+    for _plot.pages {
+        text := sprint("%", it_index);
+        defer free(text);
+
+        color := ifx _plot.active_page == it then RED else GREY;
+
+        if gui_button(button_rect, text, 10, line_color=color, consume_events=true) {
+            _plot.active_page = it;
+        }
+        button_rect.y += 20.0 + 20.0;
+    }
+
+    if _plot.active_page {
+        fit_into_rectangle(*_plot.active_page.page_rectangle, page_pane);
+        draw(_plot.active_page);
+    }
+}
+
+
+
+
+read_events :: ($DEBUG: bool = false) {
+    // mouse events
+    mv := vec2(GetMouseX(),GetMouseY());
+    array_add(*_events, event_mouse_position(mv));
+    if IsMouseButtonPressed( 0) then array_add(*_events, event_mouse_button(0, mv, .PRESSED ));
+    if IsMouseButtonDown(    0) then array_add(*_events, event_mouse_button(0, mv, .DOWN    ));
+    if IsMouseButtonUp(      0) then array_add(*_events, event_mouse_button(0, mv, .UP      ));
+    if IsMouseButtonReleased(0) then array_add(*_events, event_mouse_button(0, mv, .RELEASED));
+    if IsMouseButtonPressed( 1) then array_add(*_events, event_mouse_button(1, mv, .PRESSED ));
+    if IsMouseButtonDown(    1) then array_add(*_events, event_mouse_button(1, mv, .DOWN    ));
+    if IsMouseButtonUp(      1) then array_add(*_events, event_mouse_button(1, mv, .UP      ));
+    if IsMouseButtonReleased(1) then array_add(*_events, event_mouse_button(1, mv, .RELEASED));
+
+    #if DEBUG {
+        for _events {
+            if it.event_type == {
+                case .MOUSE_BUTTON;
+                    e := cast(*EventMouseButton)it;
+                    print("event % : %\n", it_index, <<e);
+                case .MOUSE_POSITION;
+                    e := cast(*EventMousePosition)it;
+                    print("event % : %\n", it_index, <<e);
+            }
+        }
+    }
+}
+
+
+
+
+
 plot_render :: () {
     Window(cast(s32)WINDOW_RECT.width, cast(s32)WINDOW_RECT.height, "Jai Plot");
     SetTargetFPS(60);
@@ -1510,6 +1655,7 @@ plot_render :: () {
     init_symbol_texture();
     camera := camera2d();
     _mouse = cast(*Mouse_State)mouse_free();
+    _events := NewResizableArray(10, *Event);
 
     _plot.running = true;
 
@@ -1517,32 +1663,14 @@ plot_render :: () {
         WINDOW_RECT.width  = cast(float)GetScreenWidth();
         WINDOW_RECT.height = cast(float)GetScreenHeight();
 
+        reset_events();
+        read_events(true);
 
         Drawing();
         ClearBackground(RAYWHITE);
         Mode2D(camera);
 
-        button_pane_width := 50.0;
-        page_button_pane := rectangle(0,0,button_pane_width,WINDOW_RECT.height);
-        page_pane := rectangle(button_pane_width,0,WINDOW_RECT.width-button_pane_width,WINDOW_RECT.height);
-
-        button_rect := rectangle(10.0,15.0,30.0,20.0);
-        for _plot.pages {
-            text := sprint("%", it_index);
-            defer free(text);
-
-            color := ifx _plot.active_page == it then RED else GREY;
-
-            if gui_button(button_rect, text, 10, line_color=color) {
-                _plot.active_page = it;
-            }
-            button_rect.y += 20.0 + 20.0;
-        }
-
-        if _plot.active_page {
-            fit_into_rectangle(*_plot.active_page.page_rectangle, page_pane);
-            draw(_plot.active_page);
-        }
+        draw_plot();
 
         update_mouse();
     }
