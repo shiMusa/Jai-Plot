@@ -20,6 +20,72 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding := Vector4.{
 }
 
 
+
+// ######## ##     ## ######## ##    ## ########  ######
+// ##       ##     ## ##       ###   ##    ##    ##    ##
+// ##       ##     ## ##       ####  ##    ##    ##
+// ######   ##     ## ######   ## ## ##    ##     ######
+// ##        ##   ##  ##       ##  ####    ##          ##
+// ##         ## ##   ##       ##   ###    ##    ##    ##
+// ########    ###    ######## ##    ##    ##     ######
+
+
+EventType :: enum u8 {
+    MOUSE_BUTTON;
+}
+
+_events: [..]*Event;
+pop_event :: inline () -> *Event {
+    i := _event.count-1;
+    while _events[i] == null && i >= 0 {
+        i -= 1;
+    }
+    if i == 0 then return null;
+
+    res := _events[i];
+    _events[i] = null;
+    return res;
+}
+peek_event :: inline () -> *Event {
+    i := _event.count-1;
+    while _events[i] == null && i >= 0 {
+        i -= 1;
+    }
+    if i == 0 then return null;
+
+    return _events[i];
+}
+
+Event :: struct {
+    event_type: EventType;
+}
+
+
+ButtonEventType :: enum u8 {
+    DOWN;
+    UP;
+    CLICK;
+}
+EventMouseButton :: struct {
+    using event: Event;
+    pos: Vector2;
+    button: u8;
+    button_event_type: ButtonEventType;
+}
+event_mouse_button :: (button: u8, position: Vector2, button_event_type: ButtonEventType) -> *EventMouseButton {
+    res := New(EventMouseButton);
+
+    res.event_type = .MOUSE_BUTTON;
+
+    res.button_event_type = button_event_type;
+    res.pos = position;
+    res.button = button;
+}
+
+
+
+
+
 //  ######   ##     ## ####
 // ##    ##  ##     ##  ##
 // ##        ##     ##  ##
