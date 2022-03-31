@@ -1,16 +1,19 @@
 #import "Basic";
 
 
-Option :: struct(T: Type, is_some: bool) {
+Option :: struct(T: Type) {
+    is_some: bool;
     val: T;
 }
-some :: (val: $T) -> Option(T, true) {
-    res : Option(T, true) = ---;
+some :: (val: $T) -> Option(T) {
+    res : Option(T) = ---;
+    res.is_some = true;
     res.val = val;
     return res;
 }
-none :: ($T: Type) -> Option(T, false) {
-    res : Option(T, false) = ---;
+none :: ($T: Type) -> Option(T) {
+    res : Option(T) = ---;
+    res.is_some = false;
     return res;
 }
 
@@ -44,8 +47,8 @@ err :: ($T: Type, msg: string = "", data: *void = null) -> Result(T) {
 
 
 // only allow `int` values
-foo :: (x: Option(int, $is_some)) -> Result(int) {
-    #if is_some {
+foo :: (x: Option(int)) -> Result(int) {
+    if x.is_some {
         print("ok: val = %\n", x.val);
         return ok(x.val);
     } else {
@@ -57,7 +60,7 @@ foo :: (x: Option(int, $is_some)) -> Result(int) {
 // any `Option` allowed
 bar :: (x: Option) {
     y := 0;
-    #if x.is_some {
+    if x.is_some {
         print("ok: val = %\n", x.val);
         y += 1;
     }
@@ -65,15 +68,53 @@ bar :: (x: Option) {
 }
 
 
+#import "Program_Print";  
+#import "Compiler";       
+#import "String";
+
+some_macro :: ($x: string, $code_some: Code = #code{}, $code_none: Code = #code{}) -> string {
+    return #run ()->string {
+        builder: String_Builder;
+
+        print_to_builder(*builder, "if %.is_some {\n", x);
+        print_to_builder(*builder, "it := %.val;\n", x);
+
+        some_root, some_expressions := compiler_get_nodes(code_some);
+        print_expression(*builder, some_root);
+
+        append(*builder, "\n} else {\n");
+
+        none_root, none_expressions := compiler_get_nodes(code_none);
+        print_expression(*builder, none_root);
+
+        append(*builder, "\n}\n");
+
+        res := builder_to_string(*builder);
+        print(res);
+
+        return res;
+    }();
+}
+
+
 main :: () {
     x := some(42);
     print("foo(%) = %\n", x, foo(x));
 
-    f := foo(x);
-    if f.is_ok then print("foo(x) = %\n", f.val);
-    f = foo(none(int));
-    if !f.is_ok then print("foo(none(int)) = %\n", f.error); 
+    y := 0;
+    #insert #run some_macro("x", #code {
+        print("x is some(%)\n", it);
+        y += 1;
+    }, #code {
+        print("x is none.\n");    
+    });
 
+    print("y = %\n", y);
+
+    f := foo(x);
+    if f.is_ok then print("foo(x) = %\n", x);
+    f = foo(none(int));
+    if !f.is_ok then print("foo(none(int)) = %\n", x);
 
     bar(x);
 }
