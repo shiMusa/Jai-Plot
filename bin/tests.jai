@@ -20,13 +20,17 @@ none :: ($T: Type) -> Option(T) {
 
 Error :: struct {
     msg: string;
-    data: *void;
+}
+error :: (msg: string = "error") -> *Error {
+    res := New(Error, false);
+    res.msg = msg;
+    return res;
 }
 Result :: struct(T: Type) {
     is_ok: bool;
     using _val: union {
         val: T;
-        error: Error;
+        error: *Error;
     }
 }
 ok :: (val: $T) -> Result(T) {
@@ -35,13 +39,10 @@ ok :: (val: $T) -> Result(T) {
     res.val = val;
     return res;
 }
-err :: ($T: Type, msg: string = "", data: *void = null) -> Result(T) {
+err :: ($T: Type, error: *Error) -> Result(T) {
     res : Result(T) = ---;
     res.is_ok = false;
-    e : Error = ---;
-    e.msg = msg;
-    e.data = data;
-    res.error = e;
+    res.error = error;
     return res;
 }
 
@@ -53,7 +54,7 @@ foo :: (x: Option(int)) -> Result(int) {
         return ok(x.val);
     } else {
         print("no\n");
-        return err(int, "there is nothing...");
+        return err(int, error("there is nothing..."));
     }
 }
 
@@ -102,19 +103,19 @@ main :: () {
     print("foo(%) = %\n", x, foo(x));
 
     y := 0;
-    #insert #run some_macro("x", #code {
-        print("x is some(%)\n", it);
-        y += 1;
-    }, #code {
-        print("x is none.\n");    
-    });
+    // #insert #run some_macro("x", #code {
+    //     print("x is some(%)\n", it);
+    //     y += 1;
+    // }, #code {
+    //     print("x is none.\n");    
+    // });
 
     print("y = %\n", y);
 
     f := foo(x);
     if f.is_ok then print("foo(x) = %\n", x);
     f = foo(none(int));
-    if !f.is_ok then print("foo(none(int)) = %\n", x);
+    if !f.is_ok then print("foo(none(int)) = %\n", f.error.msg);
 
     bar(x);
 }
