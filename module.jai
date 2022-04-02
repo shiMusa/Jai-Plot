@@ -40,10 +40,19 @@ event_bus :: () -> EventBus {
     return res;
 }
 
-add_event :: (using bus: *EventBus, e: *Event) {
+add_event :: (using bus: *EventBus, e: *Event, remove_same_type: bool = true) {
+    if remove_same_type {
+        remove_list := NewResizableArray(0, *Event);
+        for events {
+            if is_same_type(it, e) then array_add(*remove_list, it);
+        }
+        for remove_list {
+            remove_event(bus, it);
+        }
+    }
     // print("adding event: %\n", <<e);
     array_add(*events, e);
-    print("% events in bus %\n", events.count, bus);
+    print("% events in bus: added %\n", events.count, str(e));
     // print("    after adding event: bus.events = %\n", bus.events);
 }
 reset_event_bus :: (using bus: *EventBus) {
@@ -51,6 +60,10 @@ reset_event_bus :: (using bus: *EventBus) {
         free(it);
     }
     array_reset(*events);
+}
+remove_event :: (using bus: *EventBus, e: *Event) {
+    array_unordered_remove_by_value(*events, e);
+    free(e);
 }
 for_expansion :: (bus: *EventBus, body: Code, flags: For_Flags) #expand {
     // print("for_expansion, bus.events = %\n", bus.events);
@@ -89,9 +102,42 @@ EventType :: enum u8 {
 Event :: struct {
     event_type: EventType;
 }
-free_event_ptr :: (e: **Event) {
-    free(<<e);
-    <<e = null;
+is_same_type :: (a: *Event, b: *Event) -> bool {
+    if a.event_type != b.event_type then return false;
+    if #complete a.event_type == {
+        case .MOUSE_POSITION;
+            aa := cast(*EventMousePosition)a;
+            bb := cast(*EventMousePosition)b;
+            return is_same_type(aa,bb);
+        case .MOUSE_BUTTON;
+            aa := cast(*EventMouseButton)a;
+            bb := cast(*EventMouseButton)b;
+            return is_same_type(aa,bb);
+        case .AXIS;
+            aa := cast(*EventAxis)a;
+            bb := cast(*EventAxis)b;
+            return is_same_type(aa,bb);
+        case .BUTTON;
+            aa := cast(*EventButton)a;
+            bb := cast(*EventButton)b;
+            return is_same_type(aa,bb);
+    }
+}
+str :: (event: *Event) -> string {
+    if event.event_type == {
+        case .MOUSE_POSITION;
+            e := cast(*EventMousePosition)event;
+            return sprint("%", <<e);
+        case .MOUSE_BUTTON;
+            e := cast(*EventMouseButton)event;
+            return sprint("%", <<e);
+        case .AXIS;
+            e := cast(*EventAxis)event;
+            return sprint("%", <<e);
+        case .BUTTON;
+            e := cast(*EventButton)event;
+            return sprint("%", <<e);
+    }
 }
 
 
@@ -111,8 +157,8 @@ EventButtonType :: enum u8 {
 
 EventButton :: struct {
     using event: Event;
-    button: *Button;
     button_event_type: EventButtonType;
+    button: *Button;
 }
 event_button :: (button: *Button, type: EventButtonType) -> *EventButton {
     res := New(EventButton);
@@ -120,6 +166,11 @@ event_button :: (button: *Button, type: EventButtonType) -> *EventButton {
     res.button = button;
     res.button_event_type = type;
     return res;
+}
+is_same_type :: (a: *EventButton, b: *EventButton) -> bool {
+    // if a.button_event_type != b.button_event_type then return false;
+    if a.button != b.button then return false;
+    return true;
 }
 
 
@@ -149,6 +200,11 @@ event_axis :: (axis: *Axis, type: EventAxisType) -> *EventAxis {
     res.axis = axis;
     return res;
 }
+is_same_type :: (a: *EventAxis, b: *EventAxis) -> bool {
+    // if a.axis_event_type != b.axis_event_type then return false;
+    if a.axis != b.axis then return false;
+    return true;
+}
 
 
 // ##     ##  #######  ##     ##  ######  ########    ######## ##     ## ######## ##    ## ########  ######
@@ -168,6 +224,10 @@ event_mouse_position :: (position: Vector2) -> *EventMousePosition {
     res.event_type = .MOUSE_POSITION;
     res.pos = position;
     return res;
+}
+
+is_same_type :: inline (a: *EventMousePosition, b: *EventMousePosition) -> bool {
+    return true;
 }
 
 
@@ -193,6 +253,11 @@ event_mouse_button :: (button: u8, position: Vector2, button_event_type: ButtonE
     res.button = button;
 
     return res;
+}
+is_same_type :: inline (a: *EventMouseButton, b: *EventMouseButton) -> bool {
+    if a.button != b.button then return false;
+    // if a.button_event_type != b.button_event_type then return false;
+    return true;
 }
 
 
@@ -237,7 +302,7 @@ update :: (using button: *Button, consume_events: bool = true) {
     for *_frame_event_bus {
         ev := <<it;
         used := false;
-        defer if used && consume_events then free_event_ptr(it);
+        defer if used && consume_events then remove_event(*_frame_event_bus, ev);
 
         if ev.event_type == {
             case .MOUSE_POSITION;
@@ -1312,7 +1377,7 @@ update :: (ax: *CartesianAxis2D, consume_events: bool = true) {
     for *_event_bus {
         ev := <<it;
         used := false;
-        defer if used && consume_events then free_event_ptr(it);
+        defer if used && consume_events then remove_event(*_event_bus, ev);
 
         if ev.event_type == {
             case .BUTTON;
@@ -1338,7 +1403,7 @@ update :: (ax: *CartesianAxis2D, consume_events: bool = true) {
     for *_frame_event_bus {
         ev := <<it;
         used := false;
-        defer if used && consume_events then free_event_ptr(it);
+        defer if used && consume_events then remove_event(*_frame_event_bus, ev);
 
         if ev.event_type == {
             case .MOUSE_BUTTON;
@@ -1602,7 +1667,7 @@ update_mouse :: (consume_events: bool = true) {
     for *_event_bus {
         ev := <<it;
         used := false;
-        defer if used && consume_events then free_event_ptr(it);
+        defer if used && consume_events then remove_event(*_event_bus, ev);
 
         if ev.event_type == {
             case .AXIS;
@@ -1628,7 +1693,7 @@ update_mouse :: (consume_events: bool = true) {
     for *_frame_event_bus {
         ev := <<it;
         used := false;
-        defer if used && consume_events then free_event_ptr(it);
+        defer if used && consume_events then remove_event(*_frame_event_bus, ev);
 
         if ev.event_type == {
             case .MOUSE_BUTTON;
@@ -1826,7 +1891,7 @@ update_plot :: () {
     for *_event_bus {
         ev := <<it;
         used := false;
-        defer if used then free_event_ptr(it);
+        defer if used then remove_event(*_event_bus, ev);
 
         if ev.event_type == {
             case .BUTTON;
@@ -1883,14 +1948,14 @@ read_events :: (bus: *EventBus) {
     // mouse events
     mv := vec2(GetMouseX(),GetMouseY());
     add_event(bus, event_mouse_position(mv));
-    if IsMouseButtonPressed( 0) then add_event(bus, event_mouse_button(0, mv, .PRESSED ));
-    if IsMouseButtonDown(    0) then add_event(bus, event_mouse_button(0, mv, .DOWN    ));
-    if IsMouseButtonUp(      0) then add_event(bus, event_mouse_button(0, mv, .UP      ));
-    if IsMouseButtonReleased(0) then add_event(bus, event_mouse_button(0, mv, .RELEASED));
-    if IsMouseButtonPressed( 1) then add_event(bus, event_mouse_button(1, mv, .PRESSED ));
-    if IsMouseButtonDown(    1) then add_event(bus, event_mouse_button(1, mv, .DOWN    ));
-    if IsMouseButtonUp(      1) then add_event(bus, event_mouse_button(1, mv, .UP      ));
-    if IsMouseButtonReleased(1) then add_event(bus, event_mouse_button(1, mv, .RELEASED));
+    if IsMouseButtonPressed( 0) then add_event(bus, event_mouse_button(0, mv, .PRESSED ), false);
+    if IsMouseButtonDown(    0) then add_event(bus, event_mouse_button(0, mv, .DOWN    ), false);
+    if IsMouseButtonUp(      0) then add_event(bus, event_mouse_button(0, mv, .UP      ), false);
+    if IsMouseButtonReleased(0) then add_event(bus, event_mouse_button(0, mv, .RELEASED), false);
+    if IsMouseButtonPressed( 1) then add_event(bus, event_mouse_button(1, mv, .PRESSED ), false);
+    if IsMouseButtonDown(    1) then add_event(bus, event_mouse_button(1, mv, .DOWN    ), false);
+    if IsMouseButtonUp(      1) then add_event(bus, event_mouse_button(1, mv, .UP      ), false);
+    if IsMouseButtonReleased(1) then add_event(bus, event_mouse_button(1, mv, .RELEASED), false);
 }
 
 
