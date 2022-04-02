@@ -19,10 +19,6 @@ EventBus :: struct {
         callback: (*void, *Event) -> ();
     }
 }
-event_bus :: () -> EventBus {
-    res: EventBus;
-    return res;
-}
 subscribe :: (bus: EventBus, type: *$T, callback: (*T, *Event)->()) {
     sub : EventBus.Subscription;
     sub.subscriber = cast(*void)type;
@@ -37,6 +33,8 @@ broadcast :: (bus: EventBus, event: *Event) {
 }
 
 
+
+
 Foo :: struct {}
 
 foo :: () -> *Foo {
@@ -48,13 +46,14 @@ foo_hello :: (f: *Foo, e: *Event) {
 }
 
 
-_event_bus : EventBus;
 
 main :: () {
+    bus : EventBus;
+
     f := foo();
     g := foo();
-    subscribe(_event_bus, f, foo_hello);
-    subscribe(_event_bus, g, foo_hello);
+    subscribe(bus, f, foo_hello);
+    subscribe(bus, g, foo_hello);
 
-    broadcast(_event_bus, event("what's up?"));
+    broadcast(bus, event("what's up?"));
 }
