@@ -10,20 +10,21 @@ event :: (msg: string) -> *Event {
     return res;
 }
 
-Subscription :: struct {
-    subscriber: *void;
-    callback: (*void, *Event) -> ();
-}
 
 EventBus :: struct {
     subscriptions: [..]Subscription;
+    
+    Subscription :: struct {
+        subscriber: *void;
+        callback: (*void, *Event) -> ();
+    }
 }
 event_bus :: () -> EventBus {
     res: EventBus;
     return res;
 }
 subscribe :: (bus: EventBus, type: *$T, callback: (*T, *Event)->()) {
-    sub : Subscription;
+    sub : EventBus.Subscription;
     sub.subscriber = cast(*void)type;
     sub.callback   = cast((*void, *Event)->())callback;
 
