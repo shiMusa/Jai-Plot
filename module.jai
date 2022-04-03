@@ -304,6 +304,9 @@ draw :: (using button: *Button) {
         DrawText(text, tx, ty, font_size, BLACK);
     }
 }
+is_over :: (button: *Button, position: Vector2) -> bool {
+    return CheckCollisionPointRec(position, button.rect);
+}
 
 
 
@@ -1301,6 +1304,12 @@ cartesian_axis_2d_on_event :: (ax: *CartesianAxis2D, event: *Event) {
             }
         case .MOUSE_BUTTON;
             e := cast(*EventMouseButton)event;
+
+            is_over_reset := is_over(ax.button_reset        , e.position);
+            is_over_eq_sc := is_over(ax.button_equal_scaling, e.position);
+            is_over_fit   := is_over(ax.button_fit          , e.position);
+            if is_over_reset || is_over_eq_sc || is_over_fit then return;
+
             if e.button == 0 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
                 broadcast(_broadcaster, event_axis(cast(*Axis)ax, .MOVE));
             }
@@ -1485,7 +1494,7 @@ draw :: (using ax: *CartesianAxis2D) {
         {
             button_height := 20.0;
             button_width  := 50.0;
-            button_y := axis_rectangle.y + button_height;
+            button_y := inner_rect.y + 0.5 * button_height;
 
             r := rectangle(inner_rect.x + button_height,button_y,button_width,button_height);
             button_reset.rect = r;
