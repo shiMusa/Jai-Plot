@@ -21,6 +21,45 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding := Vector4.{
 
 
 
+// ########  ########   #######     ###    ########   ######     ###     ######  ######## ######## ########
+// ##     ## ##     ## ##     ##   ## ##   ##     ## ##    ##   ## ##   ##    ##    ##    ##       ##     ##
+// ##     ## ##     ## ##     ##  ##   ##  ##     ## ##        ##   ##  ##          ##    ##       ##     ##
+// ########  ########  ##     ## ##     ## ##     ## ##       ##     ##  ######     ##    ######   ########
+// ##     ## ##   ##   ##     ## ######### ##     ## ##       #########       ##    ##    ##       ##   ##
+// ##     ## ##    ##  ##     ## ##     ## ##     ## ##    ## ##     ## ##    ##    ##    ##       ##    ##
+// ########  ##     ##  #######  ##     ## ########   ######  ##     ##  ######     ##    ######## ##     ##
+
+_broadcaster : Broadcaster;
+
+Broadcaster :: struct {
+    subscriptions: [..]Subscription;
+    
+    Subscription :: struct {
+        subscriber: *void;
+        callback: (*void, *Event) -> ();
+    }
+}
+subscribe :: (bus: Broadcaster, sub: *$T, callback: (*T, *Event)) {
+    subscription := array_add(*bus.subscriptions);
+    subscription.subscriber = sub;
+    subscription.callback   = cast((*void, *Event)->())callback;
+}
+unsubscribe :: (bus: Broadcaster, sub: *$T) {
+    for bus.subscriptions {
+        if it.subscriber == sub {
+            remove it;
+        }
+    }
+}
+broadcast :: (bus: Broadcaster, event: *Event, consume_event: bool = true) {
+    for bus.subscriptions {
+        it.callback(it.subscriber, event);
+    }
+    if consume_event then free(event);
+}
+
+
+
 // ######## ##     ## ######## ##    ## ########  ######
 // ##       ##     ## ##       ###   ##    ##    ##    ##
 // ##       ##     ## ##       ####  ##    ##    ##
@@ -28,68 +67,6 @@ fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding := Vector4.{
 // ##        ##   ##  ##       ##  ####    ##          ##
 // ##         ## ##   ##       ##   ###    ##    ##    ##
 // ########    ###    ######## ##    ##    ##     ######
-_frame_event_bus : EventBus;
-_event_bus       : EventBus;
-
-EventBus :: struct {
-    events : [..]*Event;
-}
-event_bus :: () -> EventBus {
-    res : EventBus = ---;
-    res.events = NewResizableArray(10, *Event);
-    return res;
-}
-
-add_event :: (using bus: *EventBus, e: *Event, remove_same_type: bool = true) {
-    if remove_same_type {
-        remove_list := NewResizableArray(0, *Event);
-        for events {
-            if is_same_type(it, e) then array_add(*remove_list, it);
-        }
-        for remove_list {
-            remove_event(bus, it);
-        }
-    }
-    // print("adding event: %\n", <<e);
-    array_add(*events, e);
-    print("% events in bus: added %\n", events.count, str(e));
-    // print("    after adding event: bus.events = %\n", bus.events);
-}
-reset_event_bus :: (using bus: *EventBus) {
-    for events {
-        free(it);
-    }
-    array_reset(*events);
-}
-remove_event :: (using bus: *EventBus, e: *Event) {
-    array_unordered_remove_by_value(*events, e);
-    free(e);
-}
-for_expansion :: (bus: *EventBus, body: Code, flags: For_Flags) #expand {
-    // print("for_expansion, bus.events = %\n", bus.events);
-    #if flags & For_Flags.POINTER {
-        `it : **Event;
-    } else {
-        `it : *Event;
-    }
-    `it_index := 0;
-    i := 0;
-
-    for *e: bus.events {
-        // print("for_expansion: <<e = %\n", <<e);
-        if <<e == null then continue;
-        #if flags & For_Flags.POINTER {
-            `it = e;
-        } else {
-            `it = <<e;
-        }
-        `it_index = i;
-        #insert body;
-        i += 1;
-    }
-}
-
-
 
 
 EventType :: enum u8 {

@@ -11,7 +11,7 @@ event :: (msg: string) -> *Event {
 }
 
 
-EventBus :: struct {
+Broadcaster :: struct {
     subscriptions: [..]Subscription;
     
     Subscription :: struct {
@@ -19,36 +19,38 @@ EventBus :: struct {
         callback: (*void, *Event) -> ();
     }
 }
-subscribe :: (bus: EventBus, type: *$T, callback: (*T, *Event)->()) {
-    sub : EventBus.Subscription;
-    sub.subscriber = cast(*void)type;
-    sub.callback   = cast((*void, *Event)->())callback;
-
-    array_add(*bus.subscriptions, sub);
+subscribe :: (bus: Broadcaster, sub: *$T, callback: (*T, *Event)) {
+    subscription := array_add(*bus.subscriptions);
+    subscription.subscriber = sub;
+    subscription.callback   = cast((*void, *Event)->())callback;
 }
-broadcast :: (bus: EventBus, event: *Event) {
+unsubscribe :: (bus: Broadcaster, sub: *$T) {
+    for bus.subscriptions {
+        if it.subscriber == sub {
+            remove it;
+        }
+    }
+}
+broadcast :: (bus: Broadcaster, event: *Event, consume_event: bool = true) {
     for bus.subscriptions {
         it.callback(it.subscriber, event);
     }
+    if consume_event then free(event);
 }
 
 
-
-
 Foo :: struct {}
-
 foo :: () -> *Foo {
     res := New(Foo);
     return res;
 }
 foo_hello :: (f: *Foo, e: *Event) {
-    print("Hello from Foo! => \"%\"\n", e.msg);
+    print("Hello from a Foo: \"%\"\n", e.msg);
 }
 
 
-
 main :: () {
-    bus : EventBus;
+    bus : Broadcaster;
 
     f := foo();
     g := foo();
@@ -56,4 +58,8 @@ main :: () {
     subscribe(bus, g, foo_hello);
 
     broadcast(bus, event("what's up?"));
+
+    unsubscribe(bus, f);
+
+    broadcast(bus, event("nothing"));
 }
