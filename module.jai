@@ -79,27 +79,6 @@ EventType :: enum u8 {
 Event :: struct {
     event_type: EventType;
 }
-is_same_type :: (a: *Event, b: *Event) -> bool {
-    if a.event_type != b.event_type then return false;
-    if #complete a.event_type == {
-        case .MOUSE_POSITION;
-            aa := cast(*EventMousePosition)a;
-            bb := cast(*EventMousePosition)b;
-            return is_same_type(aa,bb);
-        case .MOUSE_BUTTON;
-            aa := cast(*EventMouseButton)a;
-            bb := cast(*EventMouseButton)b;
-            return is_same_type(aa,bb);
-        case .AXIS;
-            aa := cast(*EventAxis)a;
-            bb := cast(*EventAxis)b;
-            return is_same_type(aa,bb);
-        case .BUTTON;
-            aa := cast(*EventButton)a;
-            bb := cast(*EventButton)b;
-            return is_same_type(aa,bb);
-    }
-}
 str :: (event: *Event) -> string {
     if event.event_type == {
         case .MOUSE_POSITION;
@@ -268,39 +247,32 @@ button :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY
     res.font_size = font_size;
     res.line_color = line_color;
     res.fill_color = fill_color;
+
+    subscribe(_broadcaster, res, on_event);
+
     return res;
 }
-update :: (using button: *Button, consume_events: bool = true) {
+on_event :: (using button: *Button, event: *Event) {
     is_over = false;
     is_pressed = false;
 
-    // print("button: _frame_event_bus: %\n", _frame_event_bus);
-
-    for *_frame_event_bus {
-        ev := <<it;
-        used := false;
-        defer if used && consume_events then remove_event(*_frame_event_bus, ev);
-
-        if ev.event_type == {
-            case .MOUSE_POSITION;
-                e := cast(*EventMousePosition)ev;
-                if CheckCollisionPointRec(e.pos, rect) {
-                    // add_event(*_frame_event_bus, event_button(button, .HOVER));
-                    is_over = true;
-                    used = true;
-                }
-            case .MOUSE_BUTTON;
-                e := cast(*EventMouseButton)ev;
-                if CheckCollisionPointRec(e.pos, rect) && e.button_event_type == .PRESSED && e.button == 0 {
-                    add_event(*_event_bus, event_button(button, .PRESSED));
-                    is_over = true;
-                    is_pressed = true;
-                    used = true;
-                }
-        }
+    if event.event_type == {
+        case .MOUSE_POSITION;
+            e := cast(*EventMousePosition)event;
+            if CheckCollisionPointRec(e.pos, rect) {
+                broadcast(_broadcaster, event_button(button, .HOVER));
+                is_over = true;
+                used = true;
+            }
+        case .MOUSE_BUTTON;
+            e := cast(*EventMouseButton)event;
+            if CheckCollisionPointRec(e.pos, rect) && e.button_event_type == .PRESSED && e.button == 0 {
+                broadcast(_broadcaster, event_button(button, .PRESSED));
+                is_over = true;
+                is_pressed = true;
+                used = true;
+            }
     }
-    
-    // print("button: after _frame_event_bus: %\n", _frame_event_bus);
 }
 draw :: (using button: *Button) {
     text_width := MeasureText(text, font_size);
@@ -1921,50 +1893,34 @@ draw_plot :: () {
 
 
 
-read_events :: (bus: *EventBus) {
+read_frame_events :: () {
     // mouse events
     mv := vec2(GetMouseX(),GetMouseY());
-    add_event(bus, event_mouse_position(mv));
-    if IsMouseButtonPressed( 0) then add_event(bus, event_mouse_button(0, mv, .PRESSED ), false);
-    if IsMouseButtonDown(    0) then add_event(bus, event_mouse_button(0, mv, .DOWN    ), false);
-    if IsMouseButtonUp(      0) then add_event(bus, event_mouse_button(0, mv, .UP      ), false);
-    if IsMouseButtonReleased(0) then add_event(bus, event_mouse_button(0, mv, .RELEASED), false);
-    if IsMouseButtonPressed( 1) then add_event(bus, event_mouse_button(1, mv, .PRESSED ), false);
-    if IsMouseButtonDown(    1) then add_event(bus, event_mouse_button(1, mv, .DOWN    ), false);
-    if IsMouseButtonUp(      1) then add_event(bus, event_mouse_button(1, mv, .UP      ), false);
-    if IsMouseButtonReleased(1) then add_event(bus, event_mouse_button(1, mv, .RELEASED), false);
+
+    broadcast(_broadcaster, event_mouse_position(mv));
+    if IsMouseButtonReleased(0) then broadcast(_broadcaster, event_mouse_button(0, mv, .RELEASED));
+    if IsMouseButtonPressed( 0) then broadcast(_broadcaster, event_mouse_button(0, mv, .PRESSED ));
+    if IsMouseButtonDown(    0) then broadcast(_broadcaster, event_mouse_button(0, mv, .DOWN    ));
+    if IsMouseButtonUp(      0) then broadcast(_broadcaster, event_mouse_button(0, mv, .UP      ));
+    if IsMouseButtonReleased(1) then broadcast(_broadcaster, event_mouse_button(1, mv, .RELEASED));
+    if IsMouseButtonPressed( 1) then broadcast(_broadcaster, event_mouse_button(1, mv, .PRESSED ));
+    if IsMouseButtonDown(    1) then broadcast(_broadcaster, event_mouse_button(1, mv, .DOWN    ));
+    if IsMouseButtonUp(      1) then broadcast(_broadcaster, event_mouse_button(1, mv, .UP      ));
 }
 
 
+
+DebugPrinter :: struct {}
+_debug_printer : *DebugPrinter;
 _debug_print_events :: ($DEBUG: bool = false) {
-    #if DEBUG {
-        print("_event_bus       ////////////////////////////////\n");
-        for _event_bus {
-            if it.event_type == {
-                case .MOUSE_BUTTON;
-                    e := cast(*EventMouseButton)it;
-                    print("event % : %\n", it_index, <<e);
-                case .MOUSE_POSITION;
-                    e := cast(*EventMousePosition)it;
-                    print("event % : %\n", it_index, <<e);
-                case .AXIS;
-                    e := cast(*EventAxis)it;
-                    print("event % : %\n", it_index, <<e);
-            }
-        }
-        print("_frame_event_bus ////////////////////////////////\n");
-        for _frame_event_bus {
-            if it.event_type == {
-                case .MOUSE_BUTTON;
-                    e := cast(*EventMouseButton)it;
-                    print("event % : %\n", it_index, <<e);
-                case .MOUSE_POSITION;
-                    e := cast(*EventMousePosition)it;
-                    print("event % : %\n", it_index, <<e);
-                case .AXIS;
-                    e := cast(*EventAxis)it;
-                    print("event % : %\n", it_index, <<e);
-            }
+    _debug_printer := New(DebugPrinter);
+    subscribe(_broadcaster, _debug_printer, dprint);
+
+    dprint :: (p: *DebugPrinter, event: *Event) {
+        #if DEBUG {
+            str_event := str(event);
+            defer free(str_event);
+            print("event: %\n", str_event);
         }
     }
 }
@@ -1979,20 +1935,16 @@ plot_render :: () {
     init_symbol_texture();
     camera := camera2d();
     _mouse = cast(*Mouse_State)mouse_free();
-    _event_bus = event_bus();
-    _frame_event_bus = event_bus();
 
+    _debug_print_events(true);
     _plot.running = true;
 
     while !WindowShouldClose() {
         WINDOW_RECT.width  = cast(float)GetScreenWidth();
         WINDOW_RECT.height = cast(float)GetScreenHeight();
 
-        // reset_event_bus(_event_bus);
-        reset_event_bus(*_frame_event_bus);
         print("---------------------------------------------------\n");
-        read_events(*_frame_event_bus);
-        // _debug_print_events(true);
+        read_frame_events();
 
         update_mouse();
         update_plot();
