@@ -78,6 +78,7 @@ EventType :: enum u8 {
     AXIS;
     BUTTON;
     WINDOW;
+    PLOT;
 }
 
 Event :: struct {
@@ -130,6 +131,30 @@ event_button :: (button: *Button, type: EventButtonType) -> *EventButton {
     res.button_event_type = type;
     return res;
 }
+
+
+
+
+// ########  ##        #######  ########    ######## ##     ## ######## ##    ## ########  ######
+// ##     ## ##       ##     ##    ##       ##       ##     ## ##       ###   ##    ##    ##    ##
+// ##     ## ##       ##     ##    ##       ##       ##     ## ##       ####  ##    ##    ##
+// ########  ##       ##     ##    ##       ######   ##     ## ######   ## ## ##    ##     ######
+// ##        ##       ##     ##    ##       ##        ##   ##  ##       ##  ####    ##          ##
+// ##        ##       ##     ##    ##       ##         ## ##   ##       ##   ###    ##    ##    ##
+// ##        ########  #######     ##       ########    ###    ######## ##    ##    ##     ######
+
+
+EventPlot :: struct {
+    using event: Event;
+    page: *Page;
+}
+event_plot :: (page: *Page) -> *EventPlot {
+    res := New(EventPlot);
+    res.event_type = .PLOT;
+    res.page = page;
+    return res;
+}
+
 
 
 
@@ -234,8 +259,32 @@ event_mouse_button :: (button: u8, position: Vector2, button_event_type: ButtonE
 // ########   #######     ##       ##     #######  ##    ##
 
 
+ButtonStyle :: enum u8 {
+    FRAMED;
+    TAB_TOP;
+}
+
 Button :: struct {
     using rect: Rectangle;
+    button_style: ButtonStyle;
+}
+is_over :: inline (button: *Button, position: Vector2) -> bool {
+    return CheckCollisionPointRec(position, button.rect);
+}
+draw :: (button: *Button) {
+    if #complete button.button_style == {
+        case .FRAMED;
+            b := cast(*ButtonFramed)button;
+            draw(b);
+        case .TAB_TOP;
+            assert(false, "not implemented yet\n");
+    }
+}
+
+
+
+ButtonFramed :: struct {
+    using button: Button;
     text: string;
     font_size: s32;
     line_color: Color;
@@ -245,18 +294,19 @@ Button :: struct {
     is_pressed: bool = false;
 }
 button :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE) -> *Button {
-    res := New(Button);
+    res := New(ButtonFramed);
+    res.button_style = .FRAMED;
     res.rect = rect;
     res.text = text;
     res.font_size = font_size;
     res.line_color = line_color;
     res.fill_color = fill_color;
 
-    subscribe(_broadcaster, res, button_on_event);
+    subscribe(_broadcaster, res, button_framed_on_event);
 
     return res;
 }
-button_on_event :: (button: *Button, event: *Event) {
+button_framed_on_event :: (button: *ButtonFramed, event: *Event) {
     if event.event_type == {
         case .MOUSE_POSITION;
             e := cast(*EventMousePosition)event;
@@ -279,7 +329,7 @@ button_on_event :: (button: *Button, event: *Event) {
             }
     }
 }
-draw :: (using button: *Button) {
+draw :: (using button_framed: *ButtonFramed) {
     text_width := MeasureText(text, font_size);
 
     tx := cast(s32)(rect.width  * 0.5 + rect.x - 0.5 * text_width);
@@ -300,9 +350,6 @@ draw :: (using button: *Button) {
         DrawRectangleLinesEx(rect, 2.0, line_color);
         DrawText(text, tx, ty, font_size, BLACK);
     }
-}
-is_over :: inline (button: *Button, position: Vector2) -> bool {
-    return CheckCollisionPointRec(position, button.rect);
 }
 
 
@@ -917,6 +964,8 @@ Page_Type :: enum u8 {
 Page :: struct {
     page_rectangle: Rectangle;
     page_type: Page_Type;
+    page_title: string;
+    activated: bool;
 }
 draw :: (page: *Page) {
     if page.page_type == {
@@ -938,17 +987,25 @@ Page_Single :: struct {
     axis: *Axis;
 }
 #scope_export
-page_single :: (axis: *Axis) -> *Page_Single {
+page_single :: (axis: *Axis, page_title: string = "") -> *Page_Single {
     res := New(Page_Single);
     res.page_type = .SINGLE;
+    res.page_title = page_title;
+    res.activated = false;
     res.axis = axis;
 
-    subscribe(_broadcaster, res, page_on_event);
+    subscribe(_broadcaster, res, page_single_on_event);
 
     return res;
 }
 #scope_module
-page_on_event :: (page: *Page_Single, event: *Event) {
+page_single_on_event :: (page: *Page_Single, event: *Event) {
+    if event.event_type == {
+        case .PLOT;
+            e := cast(*EventPlot)event;
+            page.activated = cast(*Page)page == e.page;
+            page.axis.activated = page.activated;
+    }
 }
 draw :: (page: *Page_Single) {
     fit_into_rectangle(page.axis, page.page_rectangle);
@@ -977,6 +1034,7 @@ Axis :: struct {
     axis_rectangle: Rectangle;
     axis_type: Axis_Type;
     datasets: [..]Data2D;
+    activated: bool;
 }
 intersection_axis :: (ax: *Axis, pos: Vector2) -> bool {
     if ax.axis_type == {
@@ -1128,6 +1186,7 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null, title:
     res.axis_type = .CARTESIAN_2D;
     res.axis_rectangle = WINDOW_RECT;
     res.datasets  = NewResizableArray(0, Data2D);
+    res.activated = false;
 
     res.button_reset         = button(Rectangle.{}, "reset", res.font_size);
     res.button_equal_scaling = button(Rectangle.{}, "1:1"  , res.font_size);
@@ -1284,6 +1343,8 @@ map :: (using ax: *CartesianAxis2D) {
     }
 }
 cartesian_axis_2d_on_event :: (ax: *CartesianAxis2D, event: *Event) {
+    if !ax.activated then return;
+
     if event.event_type == {
         case .BUTTON;
             e := cast(*EventButton)event;
@@ -1815,47 +1876,31 @@ plot_on_event :: (plot: *Plot, event: *Event) {
     if event.event_type == {
         case .BUTTON;
             e := cast(*EventButton)event;
+            if e.button_event_type != .PRESSED then return;
+            
             for b, i: _plot.buttons {
                 if e.button == b {
                     _plot.active_page = _plot.pages[i];
+                    broadcast(_broadcaster, event_plot(_plot.active_page));
                 }
             }
     }
 }
 
 draw_plot :: () {
-    button_pane_width := 50.0;
-    page_button_pane := rectangle(0,0,button_pane_width,WINDOW_RECT.height);
-    page_pane := rectangle(button_pane_width,0,WINDOW_RECT.width-button_pane_width,WINDOW_RECT.height);
+    tabs_height := 25.0;
+    page_button_pane := rectangle(0, 0, WINDOW_RECT.width, tabs_height);
+    page_pane := rectangle(0, tabs_height, WINDOW_RECT.width, WINDOW_RECT.height-tabs_height);
 
     if !_plot.active_page then return; // no page to draw
-
-    // button_rect := rectangle(10.0,15.0,30.0,20.0);
 
     fit_into_rectangle(*_plot.active_page.page_rectangle, page_pane);
     draw(_plot.active_page);
 
     for _plot.buttons {
-        if it_index == _plot.active_page_index {
-            it.line_color = RED;
-        } else {
-            it.line_color = GREY;
-        }
+        it.rect = rectangle(it_index * 120 + 10, 0, 100, tabs_height);
         draw(it);
     }
-
-    // for _plot.pages {
-    //     text := sprint("%", it_index);
-    //     defer free(text);
-
-    //     color := ifx _plot.active_page == it then RED else GREY;
-
-
-    //     // if gui_button(button_rect, text, 10, line_color=color, consume_events=true) {
-    //     //     _plot.active_page = it;
-    //     // }
-    //     // button_rect.y += 20.0 + 20.0;
-    // }
 }
 
 
@@ -1928,8 +1973,14 @@ plot_render :: () {
 }
 #scope_export
 add_page :: (p: *$P/Page) {
+    p.activated = true;
     array_add(*_plot.pages, cast(*Page)p);
     _plot.active_page = cast(*Page)p;
+    button_label := ifx p.page_title == "" then sprint("page %", _plot.pages.count) else p.page_title;
+    
+    b := button(rectangle(0,0,1,1), button_label);
+    array_add(*_plot.buttons, b);
+    broadcast(_broadcaster, event_button(b, .PRESSED));
 }
 
 activate :: (axis: *$A/Axis) {
