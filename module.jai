@@ -1002,11 +1002,11 @@ reset :: (ax: *Axis) {
             reset(ca);
     }
 }
-zoom :: (ax: *Axis, wheel: float32) {
+zoom :: (ax: *Axis, position: Vector2, wheel: float32) {
     if ax.axis_type == {
         case .CARTESIAN_2D;
             ca := cast(*CartesianAxis2D)ax;
-            zoom(ca, wheel);
+            zoom(ca, position, wheel);
     }
 }
 fit_into_rectangle :: (ax: *Axis, rectangle: Rectangle) {
@@ -1164,15 +1164,15 @@ reset :: (axis: *CartesianAxis2D) {
 intersection_axis :: inline (axis: *CartesianAxis2D, pos: Vector2) -> bool {
     return CheckCollisionPointRec(pos, axis.inner_rect);
 }
-zoom :: (using axis: *CartesianAxis2D, wheel: float32) {
+zoom :: (using axis: *CartesianAxis2D, mouse: Vector2, wheel: float32) {
     using inner_rect;
     
     delta := 0.02 * wheel;
 
-    xmin := map_inv(x_mapper, (_mouse.x - x)          * delta + x        );
-    xmax := map_inv(x_mapper, (_mouse.x - (x+width )) * delta + x+width  );
-    ymin := map_inv(y_mapper, (_mouse.y - y)          * delta + y        );
-    ymax := map_inv(y_mapper, (_mouse.y - (y+height)) * delta + y+height );
+    xmin := map_inv(x_mapper, (mouse.x - x)          * delta + x        );
+    xmax := map_inv(x_mapper, (mouse.x - (x+width )) * delta + x+width  );
+    ymin := map_inv(y_mapper, (mouse.y - y)          * delta + y        );
+    ymax := map_inv(y_mapper, (mouse.y - (y+height)) * delta + y+height );
 
     fit_bounds(x_mapper, xmin, xmax, x, x + width , true);
     fit_bounds(y_mapper, ymin, ymax, y, y + height, true);
@@ -1187,20 +1187,18 @@ equal_scaling :: (using axis: *CartesianAxis2D) {
         free(ym);
     }
 
-    dx := map_inv(x_mapper, x +     width ) - map_inv(x_mapper, x);
-    dy := map_inv(y_mapper, y +     height) - map_inv(y_mapper, y);
     x0 := map_inv(x_mapper, x + 0.5*width );
     y0 := map_inv(y_mapper, y + 0.5*height);
 
     xmin, xmax, ymin, ymax : float32;
-    if Math.abs(dx) > Math.abs(dy) { // landscape
+    if width < height {   // portrait
         xmin = map_inv(x_mapper, x);
         xmax = map_inv(x_mapper, x + width);
         dxdp := (xmax-xmin)/width;
         if flip_y then dxdp = -dxdp;
         ymin = -dxdp*height*0.5 + y0;
         ymax =  dxdp*height*0.5 + y0;
-    } else { // portrait
+    } else {                           // landscape
         ymin = map_inv(y_mapper, y);
         ymax = map_inv(y_mapper, y + height);
         dydp := (ymax-ymin)/height;
@@ -1315,6 +1313,12 @@ cartesian_axis_2d_on_event :: (ax: *CartesianAxis2D, event: *Event) {
             }
             if e.button == 1 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
                 broadcast(_broadcaster, event_axis(cast(*Axis)ax, .RECT_ZOOM));
+            }
+        case .MOUSE_WHEEL;
+            e := cast(*EventMouseWheel)event;
+
+            if e.wheel != 0.0 && CheckCollisionPointRec(e.position, ax.inner_rect) {
+                zoom(ax, e.position, e.wheel);
             }
     }
 }
@@ -1610,11 +1614,6 @@ mouse_stop_free :: (mouse: *Mouse_State_Free) {
 }
 mouse_free_on_event :: (using mouse: *Mouse_State_Free, event: *Event) {
     if event.event_type == {
-        case .MOUSE_WHEEL;
-            e := cast(*EventMouseWheel)event;
-            if e.wheel == 0.0 then return;
-            ax := intersection_axis(_plot.active_page, e.position);
-            if ax then zoom(ax, e.wheel);
         case .AXIS;
             e := cast(*EventAxis)event;
             if e.axis_event_type == {
