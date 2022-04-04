@@ -1550,7 +1550,7 @@ draw :: (using ax: *CartesianAxis2D) {
         fs := 2*font_size;
         text_width := MeasureText(title, fs);
         x := inner_rect.x + 0.5*inner_rect.width - text_width*0.5;
-        DrawText(title, cast(s32)x, cast(s32)axis_rectangle.y + cast(s32)(0.5*fs), fs, BLACK);
+        DrawText(title, cast(s32)x, cast(s32)axis_rectangle.y + cast(s32)(0.5*fs), cast(s32)fs, BLACK);
     }
 
     if show_gui {

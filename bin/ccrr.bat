@@ -1,0 +1,1 @@
+cls && jai ../main.jai -release -import_dir "../" && "../main"

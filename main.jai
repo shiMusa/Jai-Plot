@@ -72,7 +72,7 @@ main :: () {
     y_mapper2 := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
     axis2 := cartesian_axis_2d(x_mapper2, y_mapper2);
     activate(axis2);
-    add_page(page_single(axis2));
+    add_page(page_single(axis2, "circle"));
 
     plot2d(line(SKYBLUE, 4.0), cx, cy);
     plot2d(multi(
