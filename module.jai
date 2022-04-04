@@ -256,29 +256,26 @@ button :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY
 
     return res;
 }
-button_on_event :: (using button: *Button, event: *Event) {
+button_on_event :: (button: *Button, event: *Event) {
     if event.event_type == {
         case .MOUSE_POSITION;
             e := cast(*EventMousePosition)event;
-            if CheckCollisionPointRec(e.position, rect) {
+            if is_over(button, e.position) {
                 broadcast(_broadcaster, event_button(button, .HOVER));
-                is_over = true;
+                button.is_over = true;
             } else {
-                is_over = false;
+                button.is_over = false;
             }
         case .MOUSE_BUTTON;
             e := cast(*EventMouseButton)event;
-            if CheckCollisionPointRec(e.position, rect) {
-                is_over = true;
+            if is_over(button, e.position) {
                 if e.button_event_type == .PRESSED && e.button == 0 {
                     broadcast(_broadcaster, event_button(button, .PRESSED));
-                    is_pressed = true;
+                    button.is_pressed = true;
                 }
                 if e.button_event_type == .RELEASED && e.button == 0 {
-                    is_pressed = false;
+                    button.is_pressed = false;
                 }
-            } else {
-                is_over = false;
             }
     }
 }
@@ -304,7 +301,7 @@ draw :: (using button: *Button) {
         DrawText(text, tx, ty, font_size, BLACK);
     }
 }
-is_over :: (button: *Button, position: Vector2) -> bool {
+is_over :: inline (button: *Button, position: Vector2) -> bool {
     return CheckCollisionPointRec(position, button.rect);
 }
 
@@ -1202,6 +1199,7 @@ equal_scaling :: (using axis: *CartesianAxis2D) {
         ymin = map_inv(y_mapper, y);
         ymax = map_inv(y_mapper, y + height);
         dydp := (ymax-ymin)/height;
+        if flip_y then dydp *= -1.0;
         xmin = -dydp*width*0.5 + x0;
         xmax =  dydp*width*0.5 + x0;
     }
