@@ -277,10 +277,20 @@ draw :: (button: *Button) {
             b := cast(*ButtonFramed)button;
             draw(b);
         case .TAB_TOP;
-            assert(false, "not implemented yet\n");
+            b := cast(*ButtonTab)button;
+            draw(b);
     }
 }
 
+
+
+// ########  ##     ## ######## ########  #######  ##    ## ######## ########     ###    ##     ## ######## ########
+// ##     ## ##     ##    ##       ##    ##     ## ###   ## ##       ##     ##   ## ##   ###   ### ##       ##     ##
+// ##     ## ##     ##    ##       ##    ##     ## ####  ## ##       ##     ##  ##   ##  #### #### ##       ##     ##
+// ########  ##     ##    ##       ##    ##     ## ## ## ## ######   ########  ##     ## ## ### ## ######   ##     ##
+// ##     ## ##     ##    ##       ##    ##     ## ##  #### ##       ##   ##   ######### ##     ## ##       ##     ##
+// ##     ## ##     ##    ##       ##    ##     ## ##   ### ##       ##    ##  ##     ## ##     ## ##       ##     ##
+// ########   #######     ##       ##     #######  ##    ## ##       ##     ## ##     ## ##     ## ######## ########
 
 
 ButtonFramed :: struct {
@@ -293,7 +303,7 @@ ButtonFramed :: struct {
     is_over: bool = false;
     is_pressed: bool = false;
 }
-button :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE) -> *Button {
+button_framed :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE) -> *ButtonFramed {
     res := New(ButtonFramed);
     res.button_style = .FRAMED;
     res.rect = rect;
@@ -302,11 +312,11 @@ button :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY
     res.line_color = line_color;
     res.fill_color = fill_color;
 
-    subscribe(_broadcaster, res, button_framed_on_event);
+    subscribe(_broadcaster, res, on_event);
 
     return res;
 }
-button_framed_on_event :: (button: *ButtonFramed, event: *Event) {
+on_event :: (button: *ButtonFramed, event: *Event) {
     if event.event_type == {
         case .MOUSE_POSITION;
             e := cast(*EventMousePosition)event;
@@ -350,6 +360,112 @@ draw :: (using button_framed: *ButtonFramed) {
         DrawRectangleLinesEx(rect, 2.0, line_color);
         DrawText(text, tx, ty, font_size, BLACK);
     }
+}
+
+
+
+
+
+// ########  ##     ## ######## ########  #######  ##    ## ########    ###     ######
+// ##     ## ##     ##    ##       ##    ##     ## ###   ##    ##      ## ##   ##    ##
+// ##     ## ##     ##    ##       ##    ##     ## ####  ##    ##     ##   ##  ##
+// ########  ##     ##    ##       ##    ##     ## ## ## ##    ##    ##     ## ##   ####
+// ##     ## ##     ##    ##       ##    ##     ## ##  ####    ##    ######### ##    ##
+// ##     ## ##     ##    ##       ##    ##     ## ##   ###    ##    ##     ## ##    ##
+// ########   #######     ##       ##     #######  ##    ##    ##    ##     ##  ######
+
+TabPosition :: enum u8 {
+    TOP;
+    BOTTOM;
+    LEFT;
+    RIGHT;
+}
+
+ButtonTab :: struct {
+    using button: Button;
+    text: string;
+    font_size: s32;
+    line_color: Color;
+    fill_color: Color;
+
+    active: bool;
+    tab_position: TabPosition;
+
+    is_over: bool = false;
+    is_pressed: bool = false;
+}
+button_tab :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE, tab_position: TabPosition = .TOP) -> *ButtonTab {
+    res := New(ButtonTab);
+    res.button_style = .TAB_TOP;
+    res.rect = rect;
+    res.text = text;
+    res.font_size = font_size;
+    res.line_color = line_color;
+    res.fill_color = fill_color;
+    res.active = false;
+    res.tab_position = tab_position;
+
+    subscribe(_broadcaster, res, on_event);    
+
+    return res;
+}
+on_event :: (button: *ButtonTab, event: *Event) {
+    if event.event_type == {
+        case .MOUSE_POSITION;
+            e := cast(*EventMousePosition)event;
+            if is_over(button, e.position) {
+                broadcast(_broadcaster, event_button(button, .HOVER));
+                button.is_over = true;
+            } else {
+                button.is_over = false;
+            }
+        case .MOUSE_BUTTON;
+            e := cast(*EventMouseButton)event;
+            if is_over(button, e.position) {
+                if e.button_event_type == .PRESSED && e.button == 0 {
+                    broadcast(_broadcaster, event_button(button, .PRESSED));
+                    button.is_pressed = true;
+                }
+                if e.button_event_type == .RELEASED && e.button == 0 {
+                    button.is_pressed = false;
+                }
+            }
+    }
+}
+draw :: (using button_framed: *ButtonTab) {
+    text_width := MeasureText(text, font_size);
+
+    tx := cast(s32)(rect.width  * 0.5 + rect.x - 0.5 * text_width);
+    ty := cast(s32)(rect.height * 0.5 + rect.y - 0.5 * font_size );
+
+    fc := fill_color;
+    if !active {
+        fc *= 0.75;
+        fc.a = 255;
+    }
+    if is_pressed {
+        fc *= 0.75;
+        fc.a = 255;
+    }
+    lc := line_color;
+    if is_over {
+        lc = RED;
+    }
+
+    if !active {
+        DrawRectangleRec(rect, fc);
+    } else {
+        r := rect;
+        r.height += 10;
+        DrawRectangleRec(r, fc);
+    }
+    DrawText(text, tx, ty, font_size, BLACK);
+    DrawLineEx(vec2(rect.x           ,rect.y), vec2(rect.x+rect.width, rect.y            ), 2.0, lc);
+    DrawLineEx(vec2(rect.x           ,rect.y), vec2(rect.x           , rect.y+rect.height), 2.0, lc);
+    DrawLineEx(vec2(rect.x+rect.width,rect.y), vec2(rect.x+rect.width, rect.y+rect.height), 2.0, lc);
+    // if !active {
+    //     DrawLineEx(vec2(rect.x,rect.y+height), vec2(rect.x+rect.width, rect.y+rect.height), 2.0, lc);
+    // }
 }
 
 
@@ -1188,9 +1304,9 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null, title:
     res.datasets  = NewResizableArray(0, Data2D);
     res.activated = false;
 
-    res.button_reset         = button(Rectangle.{}, "reset", res.font_size);
-    res.button_equal_scaling = button(Rectangle.{}, "1:1"  , res.font_size);
-    res.button_fit           = button(Rectangle.{}, "fit"  , res.font_size);
+    res.button_reset         = button_framed(Rectangle.{}, "reset", res.font_size);
+    res.button_equal_scaling = button_framed(Rectangle.{}, "1:1"  , res.font_size);
+    res.button_fit           = button_framed(Rectangle.{}, "fit"  , res.font_size);
     
     res.x_mapper = ifx x_mapper then x_mapper else mapper_linear();
     res.y_mapper = ifx y_mapper then y_mapper else mapper_linear();
@@ -1474,7 +1590,7 @@ draw :: (using ax: *CartesianAxis2D) {
 
                 if tx + text_width > x+width then break;
 
-                if !first_tick || Math.abs(tx-xend) > cast(float32)tick_padding {
+                if !first_tick || Math.abs(tx-xend) > cast(float32)(tick_padding+text_width) {
                     if show_tick_labels_bottom {
                         DrawLineEx(vec2(tx, y+height), vec2(tx, y+height+tick_length), tick_thickness, BLACK);
                         DrawText(label,cast(s32)tx,cast(s32)(y+height+y_padding),font_size,BLACK);
@@ -1501,7 +1617,7 @@ draw :: (using ax: *CartesianAxis2D) {
                 
                 text_width := MeasureText(label,font_size);
 
-                if !first_tick || Math.abs(ty-yend) > cast(float32)tick_padding {
+                if !first_tick || Math.abs(ty-yend) > cast(float32)(tick_padding+font_size) {
                     if show_tick_labels_left {
                         DrawLineEx(vec2(x-tick_length, ty), vec2(x, ty), tick_thickness, BLACK);
                         DrawText(label,cast(s32)(x-text_width-x_padding),cast(s32)ty,font_size,BLACK);
@@ -1838,7 +1954,7 @@ Plot :: struct {
     running: bool = false;
     callback: () -> ();
 
-    buttons: [..]*Button;
+    buttons: [..]*ButtonTab;
 }
 
 _plot : Plot;
@@ -1853,10 +1969,10 @@ plot :: (msaa : bool = true, highdpi: bool = false, callback: ()->() = _empty) {
 
     _plot.callback = callback;
     _plot.pages = NewResizableArray(0, *Page);
-    _plot.buttons = NewResizableArray(0, *Button);
+    _plot.buttons = NewResizableArray(0, *ButtonTab);
     _plot.thread = New(Thread);
 
-    subscribe(_broadcaster, *_plot, plot_on_event);
+    subscribe(_broadcaster, *_plot, on_event);
 
     render_thread :: (_thread: *Thread = null) -> s64 {
         plot_render();
@@ -1872,7 +1988,7 @@ plot :: (msaa : bool = true, highdpi: bool = false, callback: ()->() = _empty) {
 }
 #scope_module
 
-plot_on_event :: (plot: *Plot, event: *Event) {
+on_event :: (plot: *Plot, event: *Event) {
     if event.event_type == {
         case .BUTTON;
             e := cast(*EventButton)event;
@@ -1882,23 +1998,31 @@ plot_on_event :: (plot: *Plot, event: *Event) {
                 if e.button == b {
                     _plot.active_page = _plot.pages[i];
                     broadcast(_broadcaster, event_plot(_plot.active_page));
+
+                    b.active = true;
+                    for c, ci: _plot.buttons {
+                        if ci == i then continue;
+                        c.active = false;
+                    }
                 }
             }
     }
 }
 
 draw_plot :: () {
+    top_padding := 5;
     tabs_height := 25.0;
-    page_button_pane := rectangle(0, 0, WINDOW_RECT.width, tabs_height);
-    page_pane := rectangle(0, tabs_height, WINDOW_RECT.width, WINDOW_RECT.height-tabs_height);
+    page_button_pane := rectangle(0, 0, WINDOW_RECT.width, tabs_height+top_padding);
+    page_pane := rectangle(0, tabs_height+top_padding, WINDOW_RECT.width, WINDOW_RECT.height-(tabs_height+top_padding));
 
     if !_plot.active_page then return; // no page to draw
 
     fit_into_rectangle(*_plot.active_page.page_rectangle, page_pane);
     draw(_plot.active_page);
 
+    DrawLineEx(vec2(0, tabs_height+top_padding), vec2(WINDOW_RECT.width, tabs_height+top_padding), 2.0, GREY);
     for _plot.buttons {
-        it.rect = rectangle(it_index * 120 + 10, 0, 100, tabs_height);
+        it.rect = rectangle(it_index * 120 + 10, top_padding, 100, tabs_height);
         draw(it);
     }
 }
@@ -1978,7 +2102,7 @@ add_page :: (p: *$P/Page) {
     _plot.active_page = cast(*Page)p;
     button_label := ifx p.page_title == "" then sprint("page %", _plot.pages.count) else p.page_title;
     
-    b := button(rectangle(0,0,1,1), button_label);
+    b := button_tab(rectangle(0,0,1,1), button_label);
     array_add(*_plot.buttons, b);
     broadcast(_broadcaster, event_button(b, .PRESSED));
 }
