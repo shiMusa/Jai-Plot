@@ -443,10 +443,6 @@ draw :: (using button_framed: *ButtonTab) {
         fc *= 0.75;
         fc.a = 255;
     }
-    if is_pressed {
-        fc *= 0.75;
-        fc.a = 255;
-    }
     lc := line_color;
     if is_over {
         lc = RED;
@@ -459,13 +455,21 @@ draw :: (using button_framed: *ButtonTab) {
         r.height += 10;
         DrawRectangleRec(r, fc);
     }
+    
+    if is_pressed {
+        _fc := fill_color;
+        _fc *= 0.5;
+        _fc.a = 255;
+        DrawRectangleRec(rect, _fc);
+    }
+    
     DrawText(text, tx, ty, font_size, BLACK);
     DrawLineEx(vec2(rect.x           ,rect.y), vec2(rect.x+rect.width, rect.y            ), 2.0, lc);
     DrawLineEx(vec2(rect.x           ,rect.y), vec2(rect.x           , rect.y+rect.height), 2.0, lc);
     DrawLineEx(vec2(rect.x+rect.width,rect.y), vec2(rect.x+rect.width, rect.y+rect.height), 2.0, lc);
-    // if !active {
-    //     DrawLineEx(vec2(rect.x,rect.y+height), vec2(rect.x+rect.width, rect.y+rect.height), 2.0, lc);
-    // }
+    if !active {
+        DrawLineEx(vec2(rect.x,rect.y+height), vec2(rect.x+rect.width, rect.y+rect.height), 2.0, line_color);
+    }
 }
 
 
@@ -1255,6 +1259,13 @@ bounds_extra :: (using ax: *Axis, index: int) -> float32, float32 {
 
 
 
+//  ######     ###    ########  ######## ########  ######  ####    ###    ##    ##     #######  ########
+// ##    ##   ## ##   ##     ##    ##    ##       ##    ##  ##    ## ##   ###   ##    ##     ## ##     ##
+// ##        ##   ##  ##     ##    ##    ##       ##        ##   ##   ##  ####  ##           ## ##     ##
+// ##       ##     ## ########     ##    ######    ######   ##  ##     ## ## ## ##     #######  ##     ##
+// ##       ######### ##   ##      ##    ##             ##  ##  ######### ##  ####    ##        ##     ##
+// ##    ## ##     ## ##    ##     ##    ##       ##    ##  ##  ##     ## ##   ###    ##        ##     ##
+//  ######  ##     ## ##     ##    ##    ########  ######  #### ##     ## ##    ##    ######### ########
 
 #scope_export
 CartesianAxis2D :: struct {
@@ -1286,10 +1297,10 @@ CartesianAxis2D :: struct {
     show_tick_labels_bottom: bool = true;
     hide_overflow: bool = true;
     show_gui: bool = true;
-    gui_padding: float32 = 50.0;
 
-    axis_padding := Vector4.{70.0, 30.0, 70.0, 50.0}; // left, top, right, bottom
+    axis_padding := Vector4.{70.0, 50.0, 70.0, 50.0}; // left, top, right, bottom
 
+    // ticks
     font_size : s32 = 10;
     tick_length := 5;
     tick_thickness := 2.0;
@@ -1397,7 +1408,7 @@ equal_scaling :: (using axis: *CartesianAxis2D) {
 fit_into_rectangle :: (using ax: *CartesianAxis2D, r: Rectangle) {
     axis_rectangle = r;
 
-    top_padding := ifx title == "" then 0.0 else 2.0*2.0*font_size;
+    top_padding := ifx title == "" then 0.0 else 2.0*font_size;
 
     inner_rect.x = r.x + axis_padding.x;
     inner_rect.y = r.y + axis_padding.y + top_padding;
