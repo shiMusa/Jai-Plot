@@ -93,6 +93,44 @@ rectangle :: (x: $X, y: $Y, width: $W, height: $H) -> Rectangle {
     res.height = cast(float32)height;
     return res;
 }
+centrize :: (r: Rectangle) -> Rectangle {
+    res : Rectangle;
+    res.width = r.width;
+    res.height = r.height;
+    res.x = r.x-0.5*r.width;
+    res.y = r.y-0.5*r.height;
+    return res;
+}
+center_x :: inline (r: Rectangle) -> float32 {
+    return r.x + 0.5*r.width;
+}
+center_y :: inline (r: Rectangle) -> float32 {
+    return r.y + 0.5*r.height;
+}
+right :: inline (r: Rectangle) -> float32 {
+    return r.x + r.width;
+}
+bottom :: inline (r: Rectangle) -> float32 {
+    return r.y + r.height;
+}
+center :: (r: Rectangle) -> Vector2 {
+    return vec2(center_x(r), center_y(r));
+}
+bottom_right :: inline (r: Rectangle) -> Vector2 {
+    return vec2(r.x + r.width, r.y + r.height);
+}
+center_top :: inline (r: Rectangle) -> Vector2 {
+    return vec2(center_x(r), r.y);
+}
+center_bottom :: inline (r: Rectangle) -> float32 {
+    return vec2(center_x(r), r.y+r.height);
+}
+center_left :: inline (r: Rectangle) -> float32 {
+    return vec2(r.x, center_y(r));
+}
+center_right :: inline (r: Rectangle) -> float32 {
+    return vec2(r.x+r.width, center_y(r));
+}
 
 
 vec2 :: inline (x: $T, y: $U) -> Vector2 {
