@@ -1287,6 +1287,10 @@ CartesianAxis2D :: struct {
     title  : string;
     x_label: string;
     y_label: string;
+    x_label_texture: *RenderTexture2D = null; // lazy
+    y_label_texture: *RenderTexture2D = null; // lazy
+    x_label_padding: float32;
+    y_label_padding: float32;
 
     show_frame: bool = true;
     show_zero_lines: bool = true;
@@ -1325,6 +1329,8 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null, title:
     res.title   = title;
     res.x_label = x_label;
     res.y_label = y_label;
+    res.x_label_padding = ifx x_label == "" then 0.0 else 2.0 * res.font_size;
+    res.y_label_padding = ifx y_label == "" then 0.0 else 2.0 * res.font_size;
 
     res.original_x_mapper = clone(res.x_mapper);
     res.original_y_mapper = clone(res.y_mapper);
@@ -1408,12 +1414,14 @@ equal_scaling :: (using axis: *CartesianAxis2D) {
 fit_into_rectangle :: (using ax: *CartesianAxis2D, r: Rectangle) {
     axis_rectangle = r;
 
-    top_padding := ifx title == "" then 0.0 else 2.0*font_size;
+    top_padding    := ifx title   == "" then 0.0 else 2.0*font_size;
+    left_padding   := y_label_padding;
+    bottom_padding := x_label_padding;
 
-    inner_rect.x = r.x + axis_padding.x;
-    inner_rect.y = r.y + axis_padding.y + top_padding;
+    inner_rect.x = r.x + axis_padding.x + left_padding;
+    inner_rect.y = r.y + axis_padding.y + top_padding ;
     inner_rect.width  = r.width  - (axis_padding.x + axis_padding.z);
-    inner_rect.height = r.height - (axis_padding.y + axis_padding.w + top_padding);
+    inner_rect.height = r.height - (axis_padding.y + axis_padding.w + top_padding + bottom_padding);
 }
 fit_bounds :: (using ax: *CartesianAxis2D, gui_rect: Rectangle, overwrite_constraints : bool = false) {
     min_x := map_inv(x_mapper, gui_rect.x);
@@ -1678,6 +1686,31 @@ draw :: (using ax: *CartesianAxis2D) {
         text_width := MeasureText(title, fs);
         x := inner_rect.x + 0.5*inner_rect.width - text_width*0.5;
         DrawText(title, cast(s32)x, cast(s32)axis_rectangle.y + cast(s32)(0.5*fs), cast(s32)fs, BLACK);
+    }
+
+    // {
+    //     if y_label != "" {
+    //         print("generating y_label rendertexture...\n");
+    //         yw := 10 + MeasureText(y_label, res.font_size);
+    //         res.y_label = render_to_texture(yw, 2*res.font_size, #code {
+    //             ClearBackground(TRANSPARENT);
+    //             DrawText(y_label, 5, cast(s32)(0.5*res.font_size), res.font_size, BLACK);
+    //         });
+    //     }
+    // }
+
+    if x_label != "" {
+        if !x_label_texture {
+            xw := 10 + MeasureText(x_label, font_size);
+            x_label_texture = New(RenderTexture2D, false);
+            <<x_label_texture = render_to_texture(xw, 2*font_size, #code {
+                ClearBackground(TRANSPARENT);
+                DrawText(x_label, 5, cast(s32)(0.5*font_size), font_size, BLACK);
+            });
+        }
+
+        r := rectangle(300,300,x_label_texture.texture.width, x_label_texture.texture.height);
+        DrawTexturePro(x_label_texture.texture, r, r, vec2(), 0.0, WHITE);
     }
 
     if show_gui {

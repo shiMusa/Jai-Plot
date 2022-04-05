@@ -70,7 +70,7 @@ main :: () {
 
     x_mapper2 := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
     y_mapper2 := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
-    axis2 := cartesian_axis_2d(x_mapper2, y_mapper2);
+    axis2 := cartesian_axis_2d(x_mapper2, y_mapper2, x_label="x axis", y_label="y axis");
     activate(axis2);
     add_page(page_single(axis2, "circle"));
 

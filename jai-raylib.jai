@@ -3,6 +3,19 @@
 LIGHTGREY  :: LIGHTGRAY;
 GREY       :: GRAY;
 DARKGREY   :: DARKGRAY;
+TRANSPARENT :: Color.{255,255,255,0};
+
+
+
+render_to_texture :: (width: s32, height: s32, $render_code: Code) -> RenderTexture2D #expand {
+    tex := LoadRenderTexture(width, height);
+    TextureMode(tex, render_code);
+    return tex;
+}
+
+
+
+
 
 Window :: (width: s32, height: s32, title: string) #expand {
     cstr := to_c_string(title);
