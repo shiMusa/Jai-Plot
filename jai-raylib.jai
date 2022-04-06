@@ -73,6 +73,12 @@ DrawLines :: (points: []Vector2, color: Color, thickness: float = 1.0) {
         DrawLineEx(points[i], points[i+1], thickness, color);
     }
 }
+DrawLines :: (x: []float32, y: []float32, color: Color, thickness: float = 1.0) {
+    assert(x.count == y.count);
+    for i: 0..x.count-2 {
+        DrawLineEx(vec2(x[i],y[i]), vec2(x[i+1],y[i+1]), thickness, color);
+    }
+}
 
 camera2d :: (offset:=Vector2.{0.0,0.0}, target:=Vector2.{0.0,0.0}, rotation:=0.0, zoom:=1.0) -> Camera2D {
     res: Camera2D = ---;

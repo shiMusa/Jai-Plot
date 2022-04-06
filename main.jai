@@ -63,48 +63,46 @@ main :: () {
     plot(highdpi=true, callback= ()=>{ stop_simulation = true; } );
 
     {
-        x_mapper := mapper_constraint(mapper_logarithmic(), min_x = 0.1, max_x = 100.0);
-        y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
-        axis := cartesian_axis_2d(x_mapper, y_mapper, "waves");
+        x_mapper := mapper_constraint(mapper_logarithmic(), min_x =  0.1, max_x = 100.0);
+        y_mapper := mapper_constraint(mapper_linear()     , min_x = -2.0, max_x =   2.0);
+        add_page(page_single(cartesian_axis_2d(x_mapper, y_mapper, "waves")));
 
-        add_page(page_single(axis));
-        activate(axis);
-
-        plot2d(bars(Color.{ 211, 176, 131, 125 }, .CONNECTED), x, w);
-        plot2d(multi(line(RAYWHITE, 6.0), line(BLUE)), x, y);
-        plot2d(multi(symbols(color=RAYWHITE, size=6.0), symbols(.X), symbols(size=3.0)), x, z);
+        plot2d(bars(x,w,Color.{ 211, 176, 131, 125 }, .CONNECTED));
+        plot2d(multi(line(x,y,RAYWHITE, 6.0), line(x,y,BLUE)));
+        plot2d(multi(symbols(x,z,color=RAYWHITE, size=6.0), symbols(x,z,.X), symbols(x,z,size=3.0)));
     }
 
     {
         x_mapper2 := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
         y_mapper2 := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
-        axis2 := cartesian_axis_2d(x_mapper2, y_mapper2, x_label="x axis", y_label="y axis");
-        activate(axis2);
-        add_page(page_single(axis2, "circle"));
+        add_page(page_single(
+            cartesian_axis_2d(x_mapper2, y_mapper2, x_label="x axis", y_label="y axis"), 
+            "circle"
+        ));
 
-        plot2d(line(SKYBLUE, 4.0), cx, cy);
+        plot2d(line(cx,cy, SKYBLUE, 4.0));
         plot2d(multi(
-            symbols(.SQUARE, color=RAYWHITE, size=8.0), 
-            symbols(.SQUARE, color=SKYBLUE, size=6.0), 
-            symbols(.PLUS, color=GOLD, size=8.0)
-        ), vx, vy);
+            symbols(vx,vy, .SQUARE, color=RAYWHITE, size=8.0), 
+            symbols(vx,vy, .SQUARE, color=SKYBLUE, size=6.0), 
+            symbols(vx,vy, .PLUS, color=GOLD, size=8.0)
+        ));
     }
 
 
-    {
-        y_mapper := mapper_linear();
-        ax := cartesian_axis_2d(y_mapper=y_mapper, title="bar styles");
-        add_page(page_single(ax, "bars"));
-        activate(ax);
+    // {
+    //     y_mapper := mapper_linear();
+    //     ax := cartesian_axis_2d(y_mapper=y_mapper, title="bar styles");
+    //     add_page(page_single(ax, "bars"));
+    //     activate(ax);
 
-        plot2d(bars(ORANGE), x, w);
-        plot2d(bars(SKYBLUE, .CONNECTED), x, y);
-        _e : [1][]float32;
-        _e[0] = u;
-        _e_m : [1]*Mapper;
-        _e_m[0] = y_mapper;
-        plot2d(bars(MAROON, .BOUNDS), x, z, _e, _e_m);
-    }
+    //     plot2d(bars(ORANGE), x, w);
+    //     plot2d(bars(SKYBLUE, .CONNECTED), x, y);
+    //     _e : [1][]float32;
+    //     _e[0] = u;
+    //     _e_m : [1]*Mapper;
+    //     _e_m[0] = y_mapper;
+    //     plot2d(bars(MAROON, .BOUNDS), x, z, _e, _e_m);
+    // }
 
 
     simulation();
