@@ -137,6 +137,12 @@ center_left :: inline (r: Rectangle) -> float32 {
 center_right :: inline (r: Rectangle) -> float32 {
     return vec2(r.x+r.width, center_y(r));
 }
+fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding := Vector4.{0.0,0.0,0.0,0.0}) {
+    r.x = rectangle.x + padding.x;
+    r.y = rectangle.y + padding.y;
+    r.width  = rectangle.width  - (padding.x + padding.z);
+    r.height = rectangle.height - (padding.y + padding.w);
+}
 
 
 vec2 :: inline (x: $T, y: $U) -> Vector2 {
