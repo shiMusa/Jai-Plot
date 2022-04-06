@@ -685,6 +685,8 @@ bars :: (x: []float32, y: []float32, color: Color, bar_type: BarType = .SIMPLE) 
     res.type = .BARS;
     res.color = color;
     res.bar_type = bar_type;
+    res.x = x;
+    res.y = y;
     return res;
 }
 #scope_module
@@ -794,167 +796,6 @@ bounds_y :: (using graph: *Graph2D_Multi) -> float32, float32 {
 
 
 
-
-
-// // ########     ###    ########    ###        #######  ########
-// // ##     ##   ## ##      ##      ## ##      ##     ## ##     ##
-// // ##     ##  ##   ##     ##     ##   ##            ## ##     ##
-// // ##     ## ##     ##    ##    ##     ##     #######  ##     ##
-// // ##     ## #########    ##    #########    ##        ##     ##
-// // ##     ## ##     ##    ##    ##     ##    ##        ##     ##
-// // ########  ##     ##    ##    ##     ##    ######### ########
-
-// Data2D :: struct {
-//     x: []float32;
-//     y: []float32;
-
-//     extra: [][]float32;
-//     extra_mappers: []*Mapper;
-    
-//     screen_zero: Vector2;
-//     v: [..]Vector2;
-//     v_extra: [][..]float32;
-
-//     style: *Graph2D;
-// }
-// data2d :: (
-//     x: []float32,
-//     y: []float32,
-//     extra: [][]float32, 
-//     extra_mappers: []*Mapper,
-//     style: *Graph2D
-// ) -> *Data2D {
-//     N := x.count;
-//     assert(N == y.count);
-//     for extra {
-//         assert(it.count == N);
-//     }
-//     K := extra_mappers.count;
-//     assert(K == extra.count);
-
-//     res := New(Data2D);
-//     res.x = x;
-//     res.y = y;
-//     res.extra = extra;
-//     res.extra_mappers = extra_mappers;
-//     res.screen_zero = vec2();
-//     res.v = NewResizableArray(N, Vector2);
-//     res.v_extra = NewArray(K, [..]float32);
-//     for i:0..K-1 {
-//         res.v_extra[i] = NewResizableArray(N, float32);
-//     }
-//     res.style = style;
-//     return res;
-// }
-// bounds_x :: (using data: Data2D) -> float32, float32 {
-//     return min(x), max(x);
-// }
-// bounds_y :: (using data: Data2D) -> float32, float32 {
-//     return min(y), max(y);
-// }
-// bounds_extra :: (using data: Data2D, index: int) -> float32, float32 {
-//     return min(extra[index]), max(extra[index]);
-// }
-// draw :: (data: Data2D) {
-
-//     draw_style :: (s: *Graph2D) #expand {
-//         if s.type == {
-//             case .LINE;
-//                 linestyle := cast(*Graph2D_Line)s;
-//                 DrawLines(data.v, linestyle.color, linestyle.thickness);
-//             case .SYMBOLS;
-//                 symbolstyle := cast(*Graph2D_Symbols)s;
-//                 for data.v {
-//                     tex := symbol_render_textures[symbolstyle.symbol].texture;
-//                     // print("symbolstyle.symbol = %, tex = %\n", symbolstyle.symbol, tex);
-//                     s := symbolstyle.size;
-//                     DrawTextureEx( tex, it - vec2(s,s), 0.0, s/(0.5*SYMBOL_SIZE), symbolstyle.color);
-//                     // DrawCircleV(it, symbolstyle.size, symbolstyle.color);
-//                 }
-//             case .BARS;
-//                 barstyle := cast(*Graph2D_Bars)s;
-
-//                 if barstyle.bar_type == {
-//                     case .SIMPLE;
-//                         for i: 0..data.v.count-2 {
-//                             h := data.v[i].y-data.screen_zero.y;
-
-//                             if h > 0 {
-//                                 DrawRectangleV(
-//                                     vec2(data.v[i].x, data.screen_zero.y), 
-//                                     vec2(data.v[i+1].x-data.v[i].x, h), 
-//                                     barstyle.color
-//                                 );
-//                             } else {
-//                                 DrawRectangleV(
-//                                     vec2(data.v[i].x, data.screen_zero.y+h), 
-//                                     vec2(data.v[i+1].x-data.v[i].x, -h), 
-//                                     barstyle.color
-//                                 );
-//                             }
-//                         }
-//                     case .CONNECTED;
-//                         for i: 0..data.v.count-2 {
-//                             h := data.v[i+1].y-data.v[i].y;
-
-//                             if h > 0 {
-//                                 DrawRectangleV(
-//                                     vec2(data.v[i].x, data.v[i].y), 
-//                                     vec2(data.v[i+1].x-data.v[i].x, h), 
-//                                     barstyle.color
-//                                 );
-//                             } else {
-//                                 DrawRectangleV(
-//                                     vec2(data.v[i].x, data.v[i+1].y), 
-//                                     vec2(data.v[i+1].x-data.v[i].x, -h), 
-//                                     barstyle.color
-//                                 );
-//                             }
-//                         }
-//                     case .BOUNDS;
-//                         e := data.v_extra[0];
-
-//                         for i: 0..data.v.count-2 {
-//                             h := data.v[i].y-e[i];
-//                             w := data.v[i+1].x-data.v[i].x;
-
-//                             if h > 0 {
-//                                 DrawRectangleV(
-//                                     vec2(data.v[i].x, e[i]), 
-//                                     vec2(w, h), 
-//                                     barstyle.color
-//                                 );
-//                             } else {
-//                                 DrawRectangleV(
-//                                     vec2(data.v[i].x, data.v[i].y), 
-//                                     vec2(w, -h), 
-//                                     barstyle.color
-//                                 );
-//                             }
-//                         }
-//                 }
-//         }
-//     }
-
-//     if data.style.type == .MULTI {
-//         multistyle := cast(*Graph2D_Multi)data.style;
-//         for multistyle.styles {
-//             draw_style(it);
-//         }
-//     } else {
-//         draw_style(data.style);
-//     }
-    
-// }
-
-
-
-
-
-
-
-
-
 // ##     ##    ###    ########  ########  ########  ######## ########
 // ###   ###   ## ##   ##     ## ##     ## ##     ## ##       ##     ##
 // #### ####  ##   ##  ##     ## ##     ## ##     ## ##       ##     ##
@@ -963,34 +804,6 @@ bounds_y :: (using graph: *Graph2D_Multi) -> float32, float32 {
 // ##     ## ##     ## ##        ##        ##        ##       ##    ##
 // ##     ## ##     ## ##        ##        ##        ######## ##     ##
 
-
-// specialize :: (proc_name: string, general: Type, arguments: string, return_type: Type, enum_var_name: string,  specials: ..Type) -> string {
-//     builder : String_Builder;
-
-//     print_to_builder(*builder, "% :: (g: *%", proc_name, general);
-//     if arguments == "" then append(*builder, ") ") else
-//         print_to_builder(*builder, ", %) ", arguments);
-//     if return_type != void {
-//         print_to_builder(*builder, "-> % ", return_type);
-//     }
-//     append(*builder, "{\n");
-
-//     print_to_builder(*builder, "    if g.% == {\n");
-
-//     for specials {
-//         print_to_builder(*builder, "        case %.%;\n", it, enum_var_name);
-//         print_to_builder(*builder, "            s := cast(*%)g;\n", it);
-
-//         ret := ifx return_type == void then "" else " return";
-
-//         print_to_builder(*builder, "           % %(s, %);\n", ret, it, arguments);
-//     }
-
-//     append(*builder, "    }\n");
-//     append(*builder, "}\n");
-
-//     return builder_to_string(*builder);
-// }
 
 Mapper_Type :: enum u8 {
     LINEAR;
@@ -2331,7 +2144,7 @@ on_event :: (plot: *Plot, event: *Event) {
             
             for b, i: _plot.buttons {
                 if e.button == b {
-                    _plot.active_page = _plot.pages[i];
+                    activate(_plot.pages[i]);
                     broadcast(_broadcaster, event_plot(_plot.active_page));
 
                     b.active = true;
