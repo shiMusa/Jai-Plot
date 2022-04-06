@@ -573,16 +573,24 @@ symbols :: (symbol := Symbols.CIRCLE, color := RED, size: float32 = 4.0, symbol_
 
 
 
+BarType :: enum u8 {
+    SIMPLE;
+    CONNECTED;
+    BOUNDS;
+    FREE;
+}
 
 Style2D_Bars :: struct {
     using _s: Style2D;
     color: Color;
+    bar_type: BarType;
 }
 #scope_export
-bars :: (color: Color) -> *Style2D_Bars {
+bars :: (color: Color, bar_type: BarType = .SIMPLE) -> *Style2D_Bars {
     res := New(Style2D_Bars);
     res.type = .BARS;
     res.color = color;
+    res.bar_type = bar_type;
     return res;
 }
 
@@ -623,9 +631,9 @@ Data2D :: struct {
     y: []float32;
 
     extra: [][]float32;
-    extra_mappers: []Mapper;
+    extra_mappers: []*Mapper;
     
-    zero: Vector2;
+    screen_zero: Vector2;
     v: [..]Vector2;
     v_extra: [][..]float32;
 
@@ -635,27 +643,27 @@ data2d :: (
     x: []float32,
     y: []float32,
     extra: [][]float32, 
-    extra_mappers: []Mapper,
+    extra_mappers: []*Mapper,
     style: *Style2D
-) -> Data2D {
+) -> *Data2D {
     N := x.count;
     assert(N == y.count);
     for extra {
         assert(it.count == N);
     }
-    K := extra.count;
-    assert(K == extra_mappers.count);
+    K := extra_mappers.count;
+    assert(K == extra.count);
 
-    res : Data2D;
+    res := New(Data2D);
     res.x = x;
     res.y = y;
     res.extra = extra;
     res.extra_mappers = extra_mappers;
-    res.zero = vec2();
+    res.screen_zero = vec2();
     res.v = NewResizableArray(N, Vector2);
     res.v_extra = NewArray(K, [..]float32);
-    for *res.v_extra {
-        <<it = NewResizableArray(N, float32);
+    for i:0..K-1 {
+        res.v_extra[i] = NewResizableArray(N, float32);
     }
     res.style = style;
     return res;
@@ -687,22 +695,65 @@ draw :: (data: Data2D) {
                 }
             case .BARS;
                 barstyle := cast(*Style2D_Bars)s;
-                for i: 0..data.v.count-2 {
-                    h := data.v[i].y-data.zero.y;
 
-                    if h > 0 {
-                        DrawRectangleV(
-                            vec2(data.v[i].x, data.zero.y), 
-                            vec2(data.v[i+1].x-data.v[i].x, h), 
-                            barstyle.color
-                        );
-                    } else {
-                        DrawRectangleV(
-                            vec2(data.v[i].x, data.zero.y+h), 
-                            vec2(data.v[i+1].x-data.v[i].x, -h), 
-                            barstyle.color
-                        );
-                    }
+                if barstyle.bar_type == {
+                    case .SIMPLE;
+                        for i: 0..data.v.count-2 {
+                            h := data.v[i].y-data.screen_zero.y;
+
+                            if h > 0 {
+                                DrawRectangleV(
+                                    vec2(data.v[i].x, data.screen_zero.y), 
+                                    vec2(data.v[i+1].x-data.v[i].x, h), 
+                                    barstyle.color
+                                );
+                            } else {
+                                DrawRectangleV(
+                                    vec2(data.v[i].x, data.screen_zero.y+h), 
+                                    vec2(data.v[i+1].x-data.v[i].x, -h), 
+                                    barstyle.color
+                                );
+                            }
+                        }
+                    case .CONNECTED;
+                        for i: 0..data.v.count-2 {
+                            h := data.v[i+1].y-data.v[i].y;
+
+                            if h > 0 {
+                                DrawRectangleV(
+                                    vec2(data.v[i].x, data.v[i].y), 
+                                    vec2(data.v[i+1].x-data.v[i].x, h), 
+                                    barstyle.color
+                                );
+                            } else {
+                                DrawRectangleV(
+                                    vec2(data.v[i].x, data.v[i+1].y), 
+                                    vec2(data.v[i+1].x-data.v[i].x, -h), 
+                                    barstyle.color
+                                );
+                            }
+                        }
+                    case .BOUNDS;
+                        e := data.v_extra[0];
+
+                        for i: 0..data.v.count-2 {
+                            h := data.v[i].y-e[i];
+                            w := data.v[i+1].x-data.v[i].x;
+
+                            if h > 0 {
+                                DrawRectangleV(
+                                    vec2(data.v[i].x, e[i]), 
+                                    vec2(w, h), 
+                                    barstyle.color
+                                );
+                            } else {
+                                DrawRectangleV(
+                                    vec2(data.v[i].x, data.v[i].y), 
+                                    vec2(w, -h), 
+                                    barstyle.color
+                                );
+                            }
+                        }
                 }
         }
     }
@@ -768,10 +819,11 @@ Mapper_Type :: enum u8 {
     CONSTRAINT;
     LOGARITHMIC;
 }
-
+#scope_export
 Mapper :: struct {
     type: Mapper_Type = .LINEAR;
 }
+#scope_module
 clone :: (m: *Mapper) -> *Mapper {
     if m.type == {
         case .LINEAR;
@@ -1153,7 +1205,7 @@ Axis_Type :: enum u8 {
 Axis :: struct {
     axis_rectangle: Rectangle;
     axis_type: Axis_Type;
-    datasets: [..]Data2D;
+    datasets: [..]*Data2D;
     activated: bool;
 }
 intersection_axis :: (ax: *Axis, pos: Vector2) -> bool {
@@ -1317,7 +1369,7 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null, title:
     res := New(CartesianAxis2D);
     res.axis_type = .CARTESIAN_2D;
     res.axis_rectangle = WINDOW_RECT;
-    res.datasets  = NewResizableArray(0, Data2D);
+    res.datasets  = NewResizableArray(0, *Data2D);
     res.activated = false;
 
     res.button_reset         = button_framed(Rectangle.{}, "reset", res.font_size);
@@ -1457,14 +1509,14 @@ fit_data :: (using ax: *CartesianAxis2D, overwrite_constraints: bool = false) {
     }
 }
 map :: (using ax: *CartesianAxis2D) {
-    for *datasets {
-        it.zero = vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
+    for datasets {
+        it.screen_zero = vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
 
         n := it.x.count;
         
         array_resize(*it.v, n, false);
-        for e: it.v_extra {
-            array_resize(*e, n, false);
+        for i: 0..it.extra_mappers.count-1 {
+            array_resize(*it.v_extra[i], n, false);
         }
         
         for i: 0..n-1 {
@@ -1472,9 +1524,13 @@ map :: (using ax: *CartesianAxis2D) {
                 map(x_mapper, it.x[i]),
                 map(y_mapper, it.y[i])
             );
-            // for e, ei: it.v_extra {
-            //     e[i] = map(it.extra_mappers[ei], it.extra[ei][i]);
-            // }
+        }
+        if it.extra_mappers.count != 0 {
+            for e, ei: it.v_extra {
+                for i: 0..n-1 {
+                    e[i] = map(it.extra_mappers[ei], it.extra[ei][i]);
+                }
+            }
         }
     }
 }
@@ -2183,8 +2239,10 @@ plot2d :: (
     x: []float32, 
     y: []float32, 
     extra: [][]float32 = .[], 
-    extra_mappers: []Mapper = .[]
+    extra_mappers: []*Mapper = .[]
 ) {
+    // print("plot2d: extra         = %\n", extra        );
+    // print("plot2d: extra_mappers = %\n", extra_mappers);
     dataset := data2d(x, y, extra, extra_mappers, style);
     array_add(*_plot.active_axis.datasets, dataset);
 }
