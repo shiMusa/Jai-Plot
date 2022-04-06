@@ -89,20 +89,17 @@ main :: () {
     }
 
 
-    // {
-    //     y_mapper := mapper_linear();
-    //     ax := cartesian_axis_2d(y_mapper=y_mapper, title="bar styles");
-    //     add_page(page_single(ax, "bars"));
-    //     activate(ax);
+    {
+        add_page(page_single(cartesian_axis_2d(title="bar styles"), "bars"));
 
-    //     plot2d(bars(ORANGE), x, w);
-    //     plot2d(bars(SKYBLUE, .CONNECTED), x, y);
-    //     _e : [1][]float32;
-    //     _e[0] = u;
-    //     _e_m : [1]*Mapper;
-    //     _e_m[0] = y_mapper;
-    //     plot2d(bars(MAROON, .BOUNDS), x, z, _e, _e_m);
-    // }
+        plot2d(bars(x, w, ORANGE));
+        plot2d(bars(x, y, SKYBLUE, .CONNECTED));
+        // _e : [1][]float32;
+        // _e[0] = u;
+        // _e_m : [1]*Mapper;
+        // _e_m[0] = y_mapper;
+        // plot2d(bars(MAROON, .BOUNDS), x, z, _e, _e_m);
+    }
 
 
     simulation();
