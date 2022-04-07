@@ -36,7 +36,16 @@ simulation :: () {
             vy[i] = 1.5 * Math.cos(cast(float32)(t/20.0 * PI) + dt + cast(float32)(i/cast(float32)K * 2.0 * PI));
         }
 
-        // print("simulate\n");
+
+        for i:0..17-1 {
+            ccx[i] = 1.5 * Math.sin(cast(float32)i/16 * 2.0 * cast(float32)PI);
+            ccy[i] = 1.5 * Math.cos(cast(float32)i/16 * 2.0 * cast(float32)PI);
+
+            ccx[i] += cast(float32)( 4.0 * Math.sin(t/5.0 * PI) );
+            ccy[i] += cast(float32)( 4.0 * Math.cos(t/5.0 * PI) );
+        }
+
+
         sleep_milliseconds(10);
     }
 }
@@ -57,26 +66,35 @@ vx : [K+1]float32;
 vy : [K+1]float32;
 cx : [361]float32;
 cy : [361]float32;
+ccx : [17]float32;
+ccy : [17]float32;
 
 main :: () {
 
-    plot(highdpi=true, callback= ()=>{ stop_simulation = true; } );
+    plot(highdpi=false, callback= ()=>{ stop_simulation = true; } );
 
     {
         x_mapper := mapper_constraint(mapper_logarithmic(), min_x =  0.1, max_x = 100.0);
         y_mapper := mapper_constraint(mapper_linear()     , min_x = -2.0, max_x =   2.0);
         add_page(page_single(cartesian_axis_2d(x_mapper, y_mapper, "waves")));
 
-        plot2d(bars(x,w,Color.{ 211, 176, 131, 125 }, .CONNECTED));
-        plot2d(multi(line(x,y,RAYWHITE, 6.0), line(x,y,BLUE)));
-        plot2d(multi(symbols(x,z,color=RAYWHITE, size=6.0), symbols(x,z,.X), symbols(x,z,size=3.0)));
+        plot2d(bars(x,w,Color.{ 211, 176, 131, 125 }));
+        plot2d(multi(
+            line(x,y,RAYWHITE, 6.0), 
+            line(x,y,BLUE)
+        ));
+        plot2d(multi(
+            symbols(x,z,color=RAYWHITE, size=6.0), 
+            symbols(x,z,.X), 
+            symbols(x,z,size=3.0)
+        ));
     }
 
     {
-        x_mapper2 := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
-        y_mapper2 := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
+        x_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
+        y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
         add_page(page_single(
-            cartesian_axis_2d(x_mapper2, y_mapper2, x_label="x axis", y_label="y axis"), 
+            cartesian_axis_2d(x_mapper, y_mapper, x_label="x axis", y_label="y axis"), 
             "circle"
         ));
 
@@ -92,8 +110,8 @@ main :: () {
     {
         add_page(page_single(cartesian_axis_2d(title="bar styles"), "bars"));
 
-        plot2d(bars(x, w, ORANGE));
-        plot2d(bars(x, y, SKYBLUE, .CONNECTED));
+        plot2d(bars(ccx, ccy, ORANGE));
+        plot2d(bars(ccy, ccx, SKYBLUE, .CONNECTED));
         // _e : [1][]float32;
         // _e[0] = u;
         // _e_m : [1]*Mapper;

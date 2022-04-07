@@ -213,7 +213,7 @@ cartesian_axis_2d :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null, title:
     res.original_x_mapper = clone(res.x_mapper);
     res.original_y_mapper = clone(res.y_mapper);
 
-    subscribe(_broadcaster, res, cartesian_axis_2d_on_event);
+    subscribe(_broadcaster, res, on_event);
 
     return res;
 }
@@ -324,7 +324,7 @@ fit_data :: (using ax: *CartesianAxis2D, overwrite_constraints: bool = false) {
         fit_bounds(y_mapper, min_y, max_y, y+height, y, overwrite_constraints);
     }
 }
-cartesian_axis_2d_on_event :: (ax: *CartesianAxis2D, event: *Event) {
+on_event :: (ax: *CartesianAxis2D, event: *Event) {
     if !ax.activated then return;
 
     if event.event_type == {
