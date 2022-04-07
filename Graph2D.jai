@@ -15,6 +15,7 @@ Graph2D_Type :: enum u8 {
     LINE;
     SYMBOLS;
     BARS;
+    BOXES;
 
     MULTI;
 }
@@ -29,6 +30,9 @@ draw :: (graph2d: *Graph2D, x_mapper: *Mapper, y_mapper: *Mapper) {
             draw(g, x_mapper, y_mapper);
         case .BARS;
             g := cast(*Graph2D_Bars)graph2d;
+            draw(g, x_mapper, y_mapper);
+        case .BOXES;
+            g := cast(*Graph2D_Boxes)graph2d;
             draw(g, x_mapper, y_mapper);
         case .MULTI;
             g := cast(*Graph2D_Multi)graph2d;
@@ -47,6 +51,9 @@ bounds_x :: (graph2d: *Graph2D) -> float32, float32 {
         case .BARS;
             g := cast(*Graph2D_Bars)graph2d;
             mi, ma = bounds_x(g);
+        case .BOXES;
+            g := cast(*Graph2D_Boxes)graph2d;
+            mi, ma = bounds_x(g);
         case .MULTI;
             g := cast(*Graph2D_Multi)graph2d;
             mi, ma = bounds_x(g);
@@ -64,6 +71,9 @@ bounds_y :: (graph2d: *Graph2D) -> float32, float32 {
             mi, ma = bounds_y(g);
         case .BARS;
             g := cast(*Graph2D_Bars)graph2d;
+            mi, ma = bounds_y(g);
+        case .BOXES;
+            g := cast(*Graph2D_Boxes)graph2d;
             mi, ma = bounds_y(g);
         case .MULTI;
             g := cast(*Graph2D_Multi)graph2d;
@@ -224,7 +234,7 @@ Graph2D_Bars :: struct {
     bar_type: BarType;
 }
 #scope_export
-bars :: (x: []float32, y: []float32, color: Color, bar_type: BarType = .SIMPLE) -> *Graph2D_Bars {
+bars :: (x: []float32, y: []float32, color := SKYBLUE, bar_type: BarType = .SIMPLE) -> *Graph2D_Bars {
     res := New(Graph2D_Bars);
     res.type = .BARS;
     res.color = color;
@@ -276,6 +286,129 @@ bounds_x :: inline (using graph: *Graph2D_Bars) -> float32, float32 {
 bounds_y :: inline (using graph: *Graph2D_Bars) -> float32, float32 {
     return min(y), max(y);
 }
+
+
+
+
+
+
+
+// ########   #######  ##     ##
+// ##     ## ##     ##  ##   ##
+// ##     ## ##     ##   ## ##
+// ########  ##     ##    ###
+// ##     ## ##     ##   ## ##
+// ##     ## ##     ##  ##   ##
+// ########   #######  ##     ##
+
+Graph2D_Boxes :: struct {
+    using _g: Graph2D;
+    x1: []float32;
+    x2: []float32;
+    y1: []float32;
+    y2: []float32;
+    color: Color;
+}
+#scope_export
+boxes :: (x1: []float32, y1: []float32, x2: []float32 = .[], y2: []float32 = .[], color := SKYBLUE) -> *Graph2D_Boxes {
+    res := New(Graph2D_Boxes);
+    res.type = .BOXES;
+    res.color = color;
+    res.x1 = x1;
+    res.x2 = x2;
+    res.y1 = y1;
+    res.y2 = y2;
+    return res;
+}
+#scope_module
+draw :: (using graph: *Graph2D_Boxes, x_mapper: *Mapper, y_mapper: *Mapper) {
+    assert(x1.count != 0);
+    assert(y1.count != 0);
+    assert(x1.count == y1.count);
+    if x2.count != 0 then assert(x2.count == x1.count);
+    if y2.count != 0 then assert(y2.count == y1.count);
+
+    mx1 := map(x_mapper, x1);
+    mx2 := map(x_mapper, x2);
+    my1 := map(y_mapper, y1);
+    my2 := map(y_mapper, y2);
+    defer {
+        array_free(mx1);
+        array_free(mx2);
+        array_free(my1);
+        array_free(my2);
+    }
+    // zero := vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
+
+
+    if mx2.count == 0 {
+        if my2.count == 0 {
+            for i: 0..mx1.count-2 {
+                DrawRectangleRec(
+                    rectangle(
+                        min(mx1[i], mx1[i+1]),
+                        min(my1[i], my1[i+1]),
+                        Math.abs(mx1[i+1]-mx1[i]),
+                        Math.abs(my1[i+1]-my1[i])
+                    ), 
+                    color
+                );
+            }
+        } else {
+            for i: 0..mx1.count-2 {
+                DrawRectangleRec(
+                    rectangle(
+                        min(mx1[i], mx1[i+1]),
+                        min(my1[i], my2[i]),
+                        Math.abs(mx1[i+1]-mx1[i]),
+                        Math.abs(my2[i]-my1[i])
+                    ), 
+                    color
+                );
+            }
+        }
+    } else {
+        if my2.count == 0 {
+            for i: 0..mx1.count-2 {
+                DrawRectangleRec(
+                    rectangle(
+                        min(mx1[i],mx2[i]),
+                        min(my1[i], my1[i+1]),
+                        Math.abs(mx2[i]-mx1[i]),
+                        Math.abs(my1[i+1]-my1[i])
+                    ), 
+                    color
+                );
+            }
+        } else {
+            for i: 0..mx1.count-1 {
+                DrawRectangleRec(
+                    rectangle(
+                        min(mx1[i],mx2[i]),
+                        min(my1[i], my2[i]),
+                        Math.abs(mx2[i]-mx1[i]),
+                        Math.abs(my2[i]-my1[i])
+                    ), 
+                    color
+                );
+            }
+        }
+    }
+}
+bounds_x :: inline (using graph: *Graph2D_Boxes) -> float32, float32 {
+    if x2.count == 0 then return min(x1), max(x1);
+    return min(min(x1),min(x2)), max(max(x1),max(x2));
+}
+bounds_y :: inline (using graph: *Graph2D_Boxes) -> float32, float32 {
+    if y2.count == 0 then return min(y1), max(y1);
+    return min(min(y1),min(y2)), max(max(y1),max(y2));
+}
+
+
+
+
+
+
 
 
 

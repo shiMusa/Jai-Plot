@@ -8,6 +8,10 @@ simulation :: () {
     for *x {
         <<it = 100.0 * (cast(float32)it_index/cast(float32)(N-1));
     }
+    x2[0] = x[0];
+    for i: 1..N-1 {
+        x2[i] = cast(float32)i/cast(float32)N * (x[i] - x[i-1]) + x[i-1];
+    }
     for *u {
         // <<it = Math.sin(cast(float32)it_index/cast(float32)(N-1) * 4.0 * 2.0*cast(float32)PI);
         // <<it = 0.5;
@@ -27,6 +31,8 @@ simulation :: () {
             y[i] =  1.25 * Math.sin(cast(float32)(t/10.0 * PI) + x[i]/5.0 * cast(float32)PI);
             z[i] =  0.8  *  Math.cos(cast(float32)(t/13.0 * PI) + x[i]/7.0 * cast(float32)PI);
             w[i] = -1.0  * Math.sin(cast(float32)(t/16.0 * PI) + x[i]/4.0 * cast(float32)PI);
+
+            y2[i] = y[i] + 0.6;
         }
 
 
@@ -56,7 +62,9 @@ stop_simulation : bool = false;
 N :: 201;
 NP :: 20;
 x : [N]float32;
+x2 : [N]float32;
 y : [N]float32;
+y2 : [N]float32;
 z : [N]float32;
 w : [N]float32;
 u : [N]float32;
@@ -108,21 +116,19 @@ main :: () {
 
 
     {
-        add_page(page_single(cartesian_axis_2d(title="bar styles"), "bars"));
+        add_page(page_single(cartesian_axis_2d(title="bars and boxes"), "bars"));
 
         plot2d(multi(
             bars(ccx, ccy, ORANGE),
-            symbols(ccx, ccy)
+            symbols(ccx, ccy),
+            symbols(ccx, ccy, size=2.0, color=RAYWHITE)
         ));
         plot2d(multi(
             bars(ccy, ccx, SKYBLUE, .CONNECTED),
-            symbols(ccy, ccx, color=BLUE)
+            symbols(ccy, ccx, color=BLUE),
+            symbols(ccy, ccx, size=2.0, color=RAYWHITE)
         ));
-        // _e : [1][]float32;
-        // _e[0] = u;
-        // _e_m : [1]*Mapper;
-        // _e_m[0] = y_mapper;
-        // plot2d(bars(MAROON, .BOUNDS), x, z, _e, _e_m);
+        plot2d(boxes(x, y, x2, y2, SKYBLUE));
     }
 
 
