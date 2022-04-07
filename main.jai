@@ -71,7 +71,7 @@ ccy : [17]float32;
 
 main :: () {
 
-    plot(highdpi=false, callback= ()=>{ stop_simulation = true; } );
+    plot(highdpi=true, callback= ()=>{ stop_simulation = true; } );
 
     {
         x_mapper := mapper_constraint(mapper_logarithmic(), min_x =  0.1, max_x = 100.0);
@@ -110,8 +110,14 @@ main :: () {
     {
         add_page(page_single(cartesian_axis_2d(title="bar styles"), "bars"));
 
-        plot2d(bars(ccx, ccy, ORANGE));
-        plot2d(bars(ccy, ccx, SKYBLUE, .CONNECTED));
+        plot2d(multi(
+            bars(ccx, ccy, ORANGE),
+            symbols(ccx, ccy)
+        ));
+        plot2d(multi(
+            bars(ccy, ccx, SKYBLUE, .CONNECTED),
+            symbols(ccy, ccx, color=BLUE)
+        ));
         // _e : [1][]float32;
         // _e[0] = u;
         // _e_m : [1]*Mapper;

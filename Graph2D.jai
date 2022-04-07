@@ -246,39 +246,27 @@ draw :: (using graph: *Graph2D_Bars, x_mapper: *Mapper, y_mapper: *Mapper) {
     if bar_type == {
         case .SIMPLE;
             for i: 0..mx.count-2 {
-                h := my[i]-zero.y;
-
-                if h > 0 {
-                    DrawRectangleV(
-                        vec2(mx[i]          , zero.y), 
-                        vec2(mx[i+1] - mx[i], h     ), 
-                        color
-                    );
-                } else {
-                    DrawRectangleV(
-                        vec2(mx[i]          , zero.y + h), 
-                        vec2(mx[i+1] - mx[i], -h        ), 
-                        color
-                    );
-                }
+                DrawRectangleRec(
+                    rectangle(
+                        min(mx[i], mx[i+1]),
+                        min(my[i], zero.y),
+                        Math.abs(mx[i]-mx[i+1]),
+                        Math.abs(my[i]-zero.y)
+                    ), 
+                    color
+                );
             }
         case .CONNECTED;
             for i: 0..mx.count-2 {
-                h := my[i+1]-my[i];
-
-                if h > 0 {
-                    DrawRectangleV(
-                        vec2(mx[i]          , my[i]), 
-                        vec2(mx[i+1] - mx[i], h    ), 
-                        color
-                    );
-                } else {
-                    DrawRectangleV(
-                        vec2(mx[i]          , my[i+1]), 
-                        vec2(mx[i+1] - mx[i], -h     ), 
-                        color
-                    );
-                }
+                DrawRectangleRec(
+                    rectangle(
+                        min(mx[i], mx[i+1]),
+                        min(my[i], my[i+1]),
+                        Math.abs(mx[i]-mx[i+1]),
+                        Math.abs(my[i]-my[i+1])
+                    ), 
+                    color
+                );
             }
     }
 }
