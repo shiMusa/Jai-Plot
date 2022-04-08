@@ -85,3 +85,67 @@ ticks_logarithmic :: (min_x: float32, max_x: float32, $$base: float32=10.0) -> [
     }
     return ticks;
 }
+
+
+
+// ##     ##    ###     ######  ########   #######   ######
+// ###   ###   ## ##   ##    ## ##     ## ##     ## ##    ##
+// #### ####  ##   ##  ##       ##     ## ##     ## ##
+// ## ### ## ##     ## ##       ########  ##     ##  ######
+// ##     ## ######### ##       ##   ##   ##     ##       ##
+// ##     ## ##     ## ##    ## ##    ##  ##     ## ##    ##
+// ##     ## ##     ##  ######  ##     ##  #######   ######
+
+specialize :: (base: Type, enum_array: []Type, fct_name: string, other_fct_args: []string = .[], num_rets: int = 0) -> string {
+    builder : String_Builder;
+    append(          *builder, "if b.type == {\n");
+
+    for enum_array {
+        print_to_builder(*builder, "    case %;\n", it);
+        print_to_builder(*builder, "        s := cast(*%)b;\n", it);
+        if num_rets != 0 {
+            append(*builder, "        ");
+            for i: 0..num_rets-1 {
+                print_to_builder(*builder, "v%", i);
+                if i != num_rets-1 then
+                    append(*builder, ", ");
+            }
+            print_to_builder(*builder, " := %(s", fct_name);
+            if other_fct_args.count != 0 {
+                append(*builder, ", ");
+                for a, ia: other_fct_args {
+                    print_to_builder(*builder, "%", a);
+                    if ia != other_fct_args.count-1 then 
+                        append(*builder, ", ");
+                }
+            } 
+            append(*builder, ");\n");
+
+            append(*builder, "        return ");
+            for i: 0..num_rets-1 {
+                print_to_builder(*builder, "v%", i);
+                if i != num_rets-1 then
+                    append(*builder, ", ");
+            }
+            append(*builder, ";\n");
+        } else {
+            append(*builder, "        ");
+            print_to_builder(*builder, "%(s", fct_name);
+            if other_fct_args.count != 0 {
+                append(*builder, ", ");
+                for a, ia: other_fct_args {
+                    print_to_builder(*builder, "%", a);
+                    if ia != other_fct_args.count-1 then 
+                        append(*builder, ", ");
+                }
+            } 
+            append(*builder, ");\n");
+        }
+    }
+
+    append(*builder, "}\n");
+
+    res := builder_to_string(*builder);
+    print(res);
+    return res;
+}

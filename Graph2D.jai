@@ -199,8 +199,8 @@ draw :: (using graph: *Graph2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
         case .Y;
             if my2.count == 0 {
                 for i: 0..mx.count-1 {
-                    pts[2*i  ] = vec2(zero.y, mx[i]);
-                    pts[2*i+1] = vec2(my1[i], mx[i]);
+                    pts[2*i  ] = vec2(min(my1[i], zero.y), mx[i]);
+                    pts[2*i+1] = vec2(max(my1[i], zero.y), mx[i]);
                 }
             } else {
                 for i: 0..mx.count-1 {
