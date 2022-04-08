@@ -81,14 +81,14 @@ fit_bounds :: (ax: *Axis, gui_rect: Rectangle, overwrite_constraints : bool = fa
             fit_bounds(ca, gui_rect, overwrite_constraints);
     }
 }
-mouse_dragging :: (ax: *Axis) -> *Mouse_State_Dragging {
+mouse_dragging :: (ax: *Axis) -> *MouseState_Dragging {
     if ax.axis_type == {
         case .CARTESIAN_2D;
             ca := cast(*CartesianAxis2D)ax;
             return mouse_dragging(ca);
     }
 }
-mouse_rmb_dragging :: (ax: *Axis) -> *Mouse_State_RMB_Dragging {
+mouse_rmb_dragging :: (ax: *Axis) -> *MouseState_RMB_Dragging {
     if ax.axis_type == {
         case .CARTESIAN_2D;
             ca := cast(*CartesianAxis2D)ax;

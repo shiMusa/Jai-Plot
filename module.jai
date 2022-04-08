@@ -18,7 +18,7 @@ Math :: #import "Math";
 
 WINDOW_RECT := Rectangle.{0,0,800,600};
 _broadcaster : Broadcaster;
-_mouse : *Mouse_State;
+_mouse : *MouseState;
 _plot : Plot;
 
 
@@ -160,7 +160,7 @@ plot_render :: () {
 
     init_symbol_texture();
     camera := camera2d();
-    _mouse = cast(*Mouse_State)mouse_free();
+    _mouse = cast(*MouseState)mouse_free();
 
     _debug_print_events(false);
 
