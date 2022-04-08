@@ -9,11 +9,10 @@ Base :: struct {
 #insert #run specialize(Base, Types, "do_sth");
 
 Foo :: struct {
-    using _b: Base;
+    using _b :: Base.{Foo};
 }
 foo :: () -> *Foo {
     res := New(Foo);
-    res.type = Foo;
     return res;
 }
 do_sth :: (f: *Foo) {

@@ -99,6 +99,18 @@ main :: () {
     }
 
     {
+        x_mapper := mapper_constraint(mapper_linear(), min_x =  0.0, max_x = 100.0);
+        y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x =   2.0);
+        add_page(page_single(cartesian_axis_2d(x_mapper, y_mapper, "fills")));
+
+        plot2d(multi(
+            fill(.X,x,y,color=SKYBLUE), 
+            symbols(x,y,color=BLUE),
+            symbols(x,y,size=2.0,color=RAYWHITE)
+        ));
+    }
+
+    {
         x_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
         y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
         add_page(page_single(

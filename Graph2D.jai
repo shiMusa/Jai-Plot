@@ -13,6 +13,7 @@ Graph2D :: struct {
 }
 Graph2D_Type :: enum u8 {
     LINE;
+    FILL;
     SYMBOLS;
     BARS;
     BOXES;
@@ -24,6 +25,9 @@ draw :: (graph2d: *Graph2D, x_mapper: *Mapper, y_mapper: *Mapper) {
     if #complete graph2d.type == {
         case .LINE;
             g := cast(*Graph2D_Line)graph2d;
+            draw(g, x_mapper, y_mapper);
+        case .FILL;
+            g := cast(*Graph2D_Fill)graph2d;
             draw(g, x_mapper, y_mapper);
         case .SYMBOLS;
             g := cast(*Graph2D_Symbols)graph2d;
@@ -45,6 +49,9 @@ bounds_x :: (graph2d: *Graph2D) -> float32, float32 {
         case .LINE;
             g := cast(*Graph2D_Line)graph2d;
             mi, ma = bounds_x(g);
+        case .FILL;
+            g := cast(*Graph2D_Fill)graph2d;
+            mi, ma = bounds_x(g);
         case .SYMBOLS;
             g := cast(*Graph2D_Symbols)graph2d;
             mi, ma = bounds_x(g);
@@ -65,6 +72,9 @@ bounds_y :: (graph2d: *Graph2D) -> float32, float32 {
     if #complete graph2d.type == {
         case .LINE;
             g := cast(*Graph2D_Line)graph2d;
+            mi, ma = bounds_y(g);
+        case .FILL;
+            g := cast(*Graph2D_Fill)graph2d;
             mi, ma = bounds_y(g);
         case .SYMBOLS;
             g := cast(*Graph2D_Symbols)graph2d;
@@ -93,7 +103,7 @@ bounds_y :: (graph2d: *Graph2D) -> float32, float32 {
 // ######## #### ##    ## ########
 
 Graph2D_Line :: struct {
-    using _s: Graph2D;
+    using _s : Graph2D;
     x: []float32;
     y: []float32;
     color: Color;
@@ -124,6 +134,90 @@ bounds_x :: inline (using graph: *Graph2D_Line) -> float32, float32 {
 }
 bounds_y :: inline (using graph: *Graph2D_Line) -> float32, float32 {
     return min(y), max(y);
+}
+
+
+// ######## #### ##       ##
+// ##        ##  ##       ##
+// ##        ##  ##       ##
+// ######    ##  ##       ##
+// ##        ##  ##       ##
+// ##        ##  ##       ##
+// ##       #### ######## ########
+
+Graph2D_Fill :: struct {
+    using _s : Graph2D;
+    x: []float32;
+    y1: []float32;
+    y2: []float32;
+    color: Color;
+    direction: FillDirection;
+}
+#scope_export
+FillDirection :: enum u8 {
+    X;
+    Y;
+}
+fill :: (direction: FillDirection, x: []float32, y1: []float32, y2: []float32 = .[], color: Color = RED) -> *Graph2D_Fill {
+    res := New(Graph2D_Fill);
+    res.type = .FILL;
+    res.x = x;
+    res.y1 = y1;
+    res.y2 = y2;
+    res.color = color;
+    res.direction = direction;
+    return res;
+}
+#scope_module
+draw :: (using graph: *Graph2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
+    mx  := map(x_mapper, x);
+    my1 := map(y_mapper, y1);
+    my2 := map(y_mapper, y2);
+    defer {
+        array_free(mx);
+        array_free(my1);
+        array_free(my2);
+    }
+    zero := vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
+
+    pts := NewArray(mx.count * 2, Vector2);
+    defer array_free(pts);
+
+    if #complete direction == {
+        case .X;
+            if my2.count == 0 {
+                for i: 0..mx.count-1 {
+                    pts[2*i  ] = vec2(mx[i], min(my1[i], zero.y));
+                    pts[2*i+1] = vec2(mx[i], max(my1[i], zero.y));
+                }
+            } else {
+                for i: 0..mx.count-1 {
+                    pts[2*i  ] = vec2(mx[i], min(my1[i], my2[i]));
+                    pts[2*i+1] = vec2(mx[i], max(my1[i], my2[i]));
+                }
+            }
+        case .Y;
+            if my2.count == 0 {
+                for i: 0..mx.count-1 {
+                    pts[2*i  ] = vec2(zero.y, mx[i]);
+                    pts[2*i+1] = vec2(my1[i], mx[i]);
+                }
+            } else {
+                for i: 0..mx.count-1 {
+                    pts[2*i  ] = vec2(min(my1[i], my2[i]), mx[i]);
+                    pts[2*i+1] = vec2(max(my1[i], my2[i]), mx[i]);
+                }
+            }
+    }
+
+    DrawTriangleStrip(pts, color);
+}
+bounds_x :: inline (using graph: *Graph2D_Fill) -> float32, float32 {
+    return min(x), max(x);
+}
+bounds_y :: inline (using graph: *Graph2D_Fill) -> float32, float32 {
+    if y2.count == 0 then return min(y1), max(y1);
+    return min(min(y1), min(y2)), max(max(y1), max(y2));
 }
 
 
@@ -170,7 +264,7 @@ init_symbol_texture :: () {
     }
 }
 Graph2D_Symbols :: struct {
-    using _s: Graph2D;
+    using _s : Graph2D;
     x: []float32;
     y: []float32;
     color: Color;
@@ -227,7 +321,7 @@ BarType :: enum u8 {
 }
 
 Graph2D_Bars :: struct {
-    using _s: Graph2D;
+    using _s : Graph2D;
     x: []float32;
     y: []float32;
     color: Color;
@@ -302,7 +396,7 @@ bounds_y :: inline (using graph: *Graph2D_Bars) -> float32, float32 {
 // ########   #######  ##     ##
 
 Graph2D_Boxes :: struct {
-    using _g: Graph2D;
+    using _g : Graph2D;
     x1: []float32;
     x2: []float32;
     y1: []float32;
@@ -424,7 +518,7 @@ bounds_y :: inline (using graph: *Graph2D_Boxes) -> float32, float32 {
 
 #scope_module
 Graph2D_Multi :: struct {
-    using _s: Graph2D;
+    using _s : Graph2D;
     graphs2d: []*Graph2D;
 }
 #scope_export

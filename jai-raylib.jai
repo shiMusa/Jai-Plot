@@ -80,6 +80,13 @@ DrawLines :: (x: []float32, y: []float32, color: Color, thickness: float = 1.0) 
     }
 }
 
+DrawTriangleFan :: (points: []Vector2, color: Color) {
+    DrawTriangleFan(points.data, cast(s32)points.count, color);
+}
+DrawTriangleStrip :: (points: []Vector2, color: Color) {
+    DrawTriangleStrip(points.data, cast(s32)points.count, color);
+}
+
 camera2d :: (offset:=Vector2.{0.0,0.0}, target:=Vector2.{0.0,0.0}, rotation:=0.0, zoom:=1.0) -> Camera2D {
     res: Camera2D = ---;
     res.offset = offset;
