@@ -8,88 +8,28 @@
 // ##    ##  ##    ##  ##     ## ##        ##     ##    ##        ##     ##
 //  ######   ##     ## ##     ## ##        ##     ##    ######### ########
 
+
+Graph2DTypes :: Type.[
+    Graph2D_Line,
+    Graph2D_Bars,
+    Graph2D_Symbols,
+    Graph2D_Fill,
+    Graph2D_Boxes,
+    Graph2D_Multi
+];
+
 Graph2D :: struct {
-    type: Graph2D_Type;
-}
-Graph2D_Type :: enum u8 {
-    LINE;
-    FILL;
-    SYMBOLS;
-    BARS;
-    BOXES;
-
-    MULTI;
+    type: Type;
 }
 
-draw :: (graph2d: *Graph2D, x_mapper: *Mapper, y_mapper: *Mapper) {
-    if #complete graph2d.type == {
-        case .LINE;
-            g := cast(*Graph2D_Line)graph2d;
-            draw(g, x_mapper, y_mapper);
-        case .FILL;
-            g := cast(*Graph2D_Fill)graph2d;
-            draw(g, x_mapper, y_mapper);
-        case .SYMBOLS;
-            g := cast(*Graph2D_Symbols)graph2d;
-            draw(g, x_mapper, y_mapper);
-        case .BARS;
-            g := cast(*Graph2D_Bars)graph2d;
-            draw(g, x_mapper, y_mapper);
-        case .BOXES;
-            g := cast(*Graph2D_Boxes)graph2d;
-            draw(g, x_mapper, y_mapper);
-        case .MULTI;
-            g := cast(*Graph2D_Multi)graph2d;
-            draw(g, x_mapper, y_mapper);
-    }
+draw :: (b: *Graph2D, x_mapper: *Mapper, y_mapper: *Mapper) {
+    #insert #run specialize(Graph2D, Graph2DTypes, "draw", .["x_mapper", "y_mapper"]);
 }
-bounds_x :: (graph2d: *Graph2D) -> float32, float32 {
-    mi, ma : float32;
-    if #complete graph2d.type == {
-        case .LINE;
-            g := cast(*Graph2D_Line)graph2d;
-            mi, ma = bounds_x(g);
-        case .FILL;
-            g := cast(*Graph2D_Fill)graph2d;
-            mi, ma = bounds_x(g);
-        case .SYMBOLS;
-            g := cast(*Graph2D_Symbols)graph2d;
-            mi, ma = bounds_x(g);
-        case .BARS;
-            g := cast(*Graph2D_Bars)graph2d;
-            mi, ma = bounds_x(g);
-        case .BOXES;
-            g := cast(*Graph2D_Boxes)graph2d;
-            mi, ma = bounds_x(g);
-        case .MULTI;
-            g := cast(*Graph2D_Multi)graph2d;
-            mi, ma = bounds_x(g);
-    }
-    return mi, ma;
+bounds_x :: (b: *Graph2D) -> float32, float32 {
+    #insert #run specialize(Graph2D, Graph2DTypes, "bounds_x", num_rets=2);
 }
-bounds_y :: (graph2d: *Graph2D) -> float32, float32 {
-    mi, ma : float32;
-    if #complete graph2d.type == {
-        case .LINE;
-            g := cast(*Graph2D_Line)graph2d;
-            mi, ma = bounds_y(g);
-        case .FILL;
-            g := cast(*Graph2D_Fill)graph2d;
-            mi, ma = bounds_y(g);
-        case .SYMBOLS;
-            g := cast(*Graph2D_Symbols)graph2d;
-            mi, ma = bounds_y(g);
-        case .BARS;
-            g := cast(*Graph2D_Bars)graph2d;
-            mi, ma = bounds_y(g);
-        case .BOXES;
-            g := cast(*Graph2D_Boxes)graph2d;
-            mi, ma = bounds_y(g);
-        case .MULTI;
-            g := cast(*Graph2D_Multi)graph2d;
-            mi, ma = bounds_y(g);
-    }
-    return mi, ma;
+bounds_y :: (b: *Graph2D) -> float32, float32 {
+    #insert #run specialize(Graph2D, Graph2DTypes, "bounds_y", num_rets=2);
 }
 
 
@@ -112,7 +52,7 @@ Graph2D_Line :: struct {
 #scope_export
 line :: (x: []float32, y: []float32, color: Color = RED, thickness: float32 = 2.0) -> *Graph2D_Line {
     res := New(Graph2D_Line);
-    res.type = .LINE;
+    res.type = Graph2D_Line;
     res.x = x;
     res.y = y;
     res.color = color;
@@ -160,7 +100,7 @@ FillDirection :: enum u8 {
 }
 fill :: (direction: FillDirection, x: []float32, y1: []float32, y2: []float32 = .[], color: Color = RED) -> *Graph2D_Fill {
     res := New(Graph2D_Fill);
-    res.type = .FILL;
+    res.type = Graph2D_Fill;
     res.x = x;
     res.y1 = y1;
     res.y2 = y2;
@@ -274,7 +214,7 @@ Graph2D_Symbols :: struct {
 #scope_export
 symbols :: (x: []float32, y: []float32, symbol := Symbols.CIRCLE, color := RED, size: float32 = 4.0, symbol_resolution: s32 = 32) -> *Graph2D_Symbols {
     res := New(Graph2D_Symbols);
-    res.type = .SYMBOLS;
+    res.type = Graph2D_Symbols;
     res.x = x;
     res.y = y;
     res.color = color;
@@ -330,7 +270,7 @@ Graph2D_Bars :: struct {
 #scope_export
 bars :: (x: []float32, y: []float32, color := SKYBLUE, bar_type: BarType = .SIMPLE) -> *Graph2D_Bars {
     res := New(Graph2D_Bars);
-    res.type = .BARS;
+    res.type = Graph2D_Bars;
     res.color = color;
     res.bar_type = bar_type;
     res.x = x;
@@ -406,7 +346,7 @@ Graph2D_Boxes :: struct {
 #scope_export
 boxes :: (x1: []float32, y1: []float32, x2: []float32 = .[], y2: []float32 = .[], color := SKYBLUE) -> *Graph2D_Boxes {
     res := New(Graph2D_Boxes);
-    res.type = .BOXES;
+    res.type = Graph2D_Boxes;
     res.color = color;
     res.x1 = x1;
     res.x2 = x2;
@@ -524,7 +464,7 @@ Graph2D_Multi :: struct {
 #scope_export
 multi :: (graphs2d: ..*Graph2D) -> *Graph2D_Multi {
     res := New(Graph2D_Multi);
-    res.type = .MULTI;
+    res.type = Graph2D_Multi;
     res.graphs2d = graphs2d;
     return res;
 }
