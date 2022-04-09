@@ -117,13 +117,6 @@ draw :: (using button_framed: *Button_Framed) {
 // ##     ## ##     ##    ##       ##    ##     ## ##   ###    ##    ##     ## ##    ##
 // ########   #######     ##       ##     #######  ##    ##    ##    ##     ##  ######
 
-TabPosition :: enum u8 {
-    TOP;
-    BOTTOM;
-    LEFT;
-    RIGHT;
-}
-
 Button_Tab :: struct {
     using button: Button;
     text: string;
@@ -132,12 +125,11 @@ Button_Tab :: struct {
     fill_color: Color;
 
     active: bool;
-    tab_position: TabPosition;
 
     is_over: bool = false;
     is_pressed: bool = false;
 }
-button_tab :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE, tab_position: TabPosition = .TOP) -> *Button_Tab {
+button_tab :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE) -> *Button_Tab {
     res := New(Button_Tab);
     res.type = Button_Tab;
     res.rect = rect;
@@ -146,7 +138,6 @@ button_tab :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := 
     res.line_color = line_color;
     res.fill_color = fill_color;
     res.active = false;
-    res.tab_position = tab_position;
 
     subscribe(_broadcaster, res, on_event);    
 
