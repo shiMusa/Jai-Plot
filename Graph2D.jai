@@ -9,7 +9,7 @@
 //  ######   ##     ## ##     ## ##        ##     ##    ######### ########
 
 
-Graph2DTypes :: Type.[
+Graph2D_Typess :: Type.[
     Graph2D_Line,
     Graph2D_Bars,
     Graph2D_Symbols,
@@ -23,13 +23,13 @@ Graph2D :: struct {
 }
 
 draw :: (b: *Graph2D, x_mapper: *Mapper, y_mapper: *Mapper) {
-    #insert #run specialize(Graph2D, Graph2DTypes, "draw", .["x_mapper", "y_mapper"]);
+    #insert #run specialize(Graph2D, Graph2D_Typess, "draw", .["x_mapper", "y_mapper"]);
 }
 bounds_x :: (b: *Graph2D) -> float32, float32 {
-    #insert #run specialize(Graph2D, Graph2DTypes, "bounds_x", num_rets=2);
+    #insert #run specialize(Graph2D, Graph2D_Typess, "bounds_x", num_rets=2);
 }
 bounds_y :: (b: *Graph2D) -> float32, float32 {
-    #insert #run specialize(Graph2D, Graph2DTypes, "bounds_y", num_rets=2);
+    #insert #run specialize(Graph2D, Graph2D_Typess, "bounds_y", num_rets=2);
 }
 
 
