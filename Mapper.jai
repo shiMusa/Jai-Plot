@@ -21,10 +21,10 @@ Mapper :: struct {
 }
 #scope_module
 clone :: (b: *Mapper) -> *Mapper {
-    #insert #run specialize(Mapper, Mapper_Types, "clone", .[], 1);
+    #insert #run specialize(Mapper_Types, "clone", .[], 1);
 }
 get_inner_type :: (b: *Mapper) -> Type {
-    #insert #run specialize(Mapper, Mapper_Types, "get_inner_type", .[], 1);
+    #insert #run specialize(Mapper_Types, "get_inner_type", .[], 1);
 }
 map :: (b: *Mapper, x: []float32) -> []float32 {
     res := NewArray(x.count, float32, false);
@@ -34,7 +34,7 @@ map :: (b: *Mapper, x: []float32) -> []float32 {
     return res;
 }
 map :: (b: *Mapper, x: float32) -> float32 {
-    #insert #run specialize(Mapper, Mapper_Types, "map", .["x"], 1);
+    #insert #run specialize(Mapper_Types, "map", .["x"], 1);
 }
 map_inv :: (b: *Mapper, y: []float32) -> []float32 {
     res := NewArray(x.count, float32, false);
@@ -44,13 +44,13 @@ map_inv :: (b: *Mapper, y: []float32) -> []float32 {
     return res;
 }
 map_inv :: (b: *Mapper, y: float32) -> float32 {
-    #insert #run specialize(Mapper, Mapper_Types, "map_inv", .["y"], 1);
+    #insert #run specialize(Mapper_Types, "map_inv", .["y"], 1);
 }
 fit :: (b: *Mapper, x: float32, y: float32) {
-    #insert #run specialize(Mapper, Mapper_Types, "fit", .["x", "y"]);
+    #insert #run specialize(Mapper_Types, "fit", .["x", "y"]);
 }
 fit_bounds :: (b: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y: float32, overwrite_constraints: bool = false) {
-    #insert #run specialize(Mapper, Mapper_Types, "fit_bounds", .["min_x", "max_x", "min_y", "max_y", "overwrite_constraints"]);
+    #insert #run specialize(Mapper_Types, "fit_bounds", .["min_x", "max_x", "min_y", "max_y", "overwrite_constraints"]);
 }
 
 

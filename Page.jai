@@ -24,10 +24,10 @@ activate :: (page: *Page) {
     _plot.active_page = cast(*Page)page;
 }
 draw :: (b: *Page) {
-    #insert #run specialize(Page, Page_Types, "draw");
+    #insert #run specialize(Page_Types, "draw");
 }
 intersection_axis :: (b: *Page, pos: Vector2) -> *Axis {
-    #insert #run specialize(Page, Page_Types, "intersection_axis", .["pos"], 1);
+    #insert #run specialize(Page_Types, "intersection_axis", .["pos"], 1);
 }
 
 

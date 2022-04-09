@@ -24,7 +24,7 @@ MouseState :: struct {
 }
 
 draw :: (b: *MouseState) {
-    #insert #run specialize(MouseState, MouseState_Types, "draw");
+    #insert #run specialize(MouseState_Types, "draw");
 }
 
 

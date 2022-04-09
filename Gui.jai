@@ -22,7 +22,7 @@ is_over :: inline (button: *Button, position: Vector2) -> bool {
     return CheckCollisionPointRec(position, button.rect);
 }
 draw :: (b: *Button) {
-    #insert #run specialize(Button, Button_Types, "draw");
+    #insert #run specialize(Button_Types, "draw");
 }
 
 

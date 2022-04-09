@@ -63,7 +63,7 @@ Event :: struct {
     type: Type;
 }
 str :: (event: *Event) -> string {
-    #insert #run specialize(Event, Event_Types, "str");
+    #insert #run specialize(Event_Types, "str");
 }
 
 

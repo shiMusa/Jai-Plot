@@ -96,18 +96,25 @@ ticks_logarithmic :: (min_x: float32, max_x: float32, $$base: float32=10.0) -> [
 // ##     ## ##     ## ##    ## ##    ##  ##     ## ##    ##
 // ##     ## ##     ##  ######  ##     ##  #######   ######
 
-specialize :: (base: Type, enum_array: []Type, fct_name: string, other_fct_args: []string = .[], num_rets: int = 0) -> string {
+specialize :: (
+    enum_array: []Type, 
+    fct_name: string, 
+    other_fct_args: []string = .[], 
+    num_return_vars: int = 0,
+    base: string = "b", 
+    type_var: string = "type"
+) -> string {
     builder : String_Builder;
-    append(          *builder, "if b.type == {\n");
+    print_to_builder(*builder, "if %.% == {\n", base, type_var);
 
     for enum_array {
         print_to_builder(*builder, "    case %;\n", it);
-        print_to_builder(*builder, "        s := cast(*%)b;\n", it);
-        if num_rets != 0 {
+        print_to_builder(*builder, "        s := cast(*%)%;\n", it, base);
+        if num_return_vars != 0 {
             append(*builder, "        ");
-            for i: 0..num_rets-1 {
+            for i: 0..num_return_vars-1 {
                 print_to_builder(*builder, "v%", i);
-                if i != num_rets-1 then
+                if i != num_return_vars-1 then
                     append(*builder, ", ");
             }
             print_to_builder(*builder, " := %(s", fct_name);
@@ -122,9 +129,9 @@ specialize :: (base: Type, enum_array: []Type, fct_name: string, other_fct_args:
             append(*builder, ");\n");
 
             append(*builder, "        return ");
-            for i: 0..num_rets-1 {
+            for i: 0..num_return_vars-1 {
                 print_to_builder(*builder, "v%", i);
-                if i != num_rets-1 then
+                if i != num_return_vars-1 then
                     append(*builder, ", ");
             }
             append(*builder, ";\n");

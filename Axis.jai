@@ -35,31 +35,31 @@ plot2d :: (ax: *Axis, graph2d: *Graph_2D) {
 
 
 intersection_axis :: (b: *Axis, pos: Vector2) -> bool {
-    #insert #run specialize(Axis, Axis_Types, "intersection_axis", .["pos"], 1);
+    #insert #run specialize(Axis_Types, "intersection_axis", .["pos"], 1);
 }
 draw :: (b: *Axis) {
-    #insert #run specialize(Axis, Axis_Types, "draw");
+    #insert #run specialize(Axis_Types, "draw");
 }
 reset :: (b: *Axis) {
-    #insert #run specialize(Axis, Axis_Types, "reset");
+    #insert #run specialize(Axis_Types, "reset");
 }
 zoom :: (b: *Axis, position: Vector2, wheel: float32) {
-    #insert #run specialize(Axis, Axis_Types, "zoom", .["position", "wheel"]);
+    #insert #run specialize(Axis_Types, "zoom", .["position", "wheel"]);
 }
 fit_into_rectangle :: (b: *Axis, rectangle: Rectangle) {
-    #insert #run specialize(Axis, Axis_Types, "fit_into_rectangle", .["rectangle"]);
+    #insert #run specialize(Axis_Types, "fit_into_rectangle", .["rectangle"]);
 }
 fit_data :: (b: *Axis, overwrite_constraints: bool = false) {
-    #insert #run specialize(Axis, Axis_Types, "fit_data", .["overwrite_constraints"]);
+    #insert #run specialize(Axis_Types, "fit_data", .["overwrite_constraints"]);
 }
 fit_bounds :: (b: *Axis, gui_rect: Rectangle, overwrite_constraints : bool = false) {
-    #insert #run specialize(Axis, Axis_Types, "fit_bounds", .["gui_rect", "overwrite_constraints"]);
+    #insert #run specialize(Axis_Types, "fit_bounds", .["gui_rect", "overwrite_constraints"]);
 }
 mouse_dragging :: (b: *Axis) -> *MouseState_Dragging {
-    #insert #run specialize(Axis, Axis_Types, "mouse_dragging", .[], 1);
+    #insert #run specialize(Axis_Types, "mouse_dragging", .[], 1);
 }
 mouse_rmb_dragging :: (b: *Axis) -> *MouseState_RMB_Dragging {
-    #insert #run specialize(Axis, Axis_Types, "mouse_rmb_dragging", .[], 1);
+    #insert #run specialize(Axis_Types, "mouse_rmb_dragging", .[], 1);
 }
 bounds_x :: (using ax: *Axis) -> float32, float32 {
     assert(graphs2d.count > 0);

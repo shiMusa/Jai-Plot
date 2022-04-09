@@ -23,13 +23,13 @@ Graph_2D :: struct {
 }
 
 draw :: (b: *Graph_2D, x_mapper: *Mapper, y_mapper: *Mapper) {
-    #insert #run specialize(Graph_2D, Graph_2D_Types, "draw", .["x_mapper", "y_mapper"]);
+    #insert #run specialize(Graph_2D_Types, "draw", .["x_mapper", "y_mapper"]);
 }
 bounds_x :: (b: *Graph_2D) -> float32, float32 {
-    #insert #run specialize(Graph_2D, Graph_2D_Types, "bounds_x", num_rets=2);
+    #insert #run specialize(Graph_2D_Types, "bounds_x", num_return_vars=2);
 }
 bounds_y :: (b: *Graph_2D) -> float32, float32 {
-    #insert #run specialize(Graph_2D, Graph_2D_Types, "bounds_y", num_rets=2);
+    #insert #run specialize(Graph_2D_Types, "bounds_y", num_return_vars=2);
 }
 
 
