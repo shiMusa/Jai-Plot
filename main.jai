@@ -84,7 +84,7 @@ main :: () {
     {
         x_mapper := mapper_constraint(mapper_logarithmic(), min_x =  0.1, max_x = 100.0);
         y_mapper := mapper_constraint(mapper_linear()     , min_x = -2.0, max_x =   2.0);
-        add_page(page_single(cartesian_axis_2d(x_mapper, y_mapper, "waves")));
+        add_page(page_single(axis_2d_cartesian(x_mapper, y_mapper, "waves")));
 
         plot2d(bars(x,w,Color.{ 211, 176, 131, 125 }));
         plot2d(multi(
@@ -101,7 +101,7 @@ main :: () {
     {
         x_mapper := mapper_constraint(mapper_linear(), min_x =  0.0, max_x = 100.0);
         y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x =   2.0);
-        add_page(page_single(cartesian_axis_2d(x_mapper, y_mapper, "fills")));
+        add_page(page_single(axis_2d_cartesian(x_mapper, y_mapper, "fills")));
 
         plot2d(multi(
             fill(.X,x,y,color=SKYBLUE), 
@@ -114,7 +114,7 @@ main :: () {
         x_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
         y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
         add_page(page_single(
-            cartesian_axis_2d(x_mapper, y_mapper, x_label="x axis", y_label="y axis"), 
+            axis_2d_cartesian(x_mapper, y_mapper, x_label="x axis", y_label="y axis"), 
             "circle"
         ));
 
@@ -128,7 +128,7 @@ main :: () {
 
 
     {
-        add_page(page_single(cartesian_axis_2d(title="bars and boxes"), "bars"));
+        add_page(page_single(axis_2d_cartesian(title="bars and boxes"), "bars"));
 
         plot2d(multi(
             bars(ccx, ccy, ORANGE),

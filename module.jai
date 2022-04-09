@@ -42,7 +42,7 @@ Plot :: struct {
     running: bool = false;
     callback: () -> ();
 
-    buttons: [..]*ButtonTab;
+    buttons: [..]*Button_Tab;
 }
 
 
@@ -56,7 +56,7 @@ plot :: (msaa : bool = true, highdpi: bool = false, callback: ()->() = _empty) {
 
     _plot.callback = callback;
     _plot.pages = NewResizableArray(0, *Page);
-    _plot.buttons = NewResizableArray(0, *ButtonTab);
+    _plot.buttons = NewResizableArray(0, *Button_Tab);
     _plot.thread = New(Thread);
 
     subscribe(_broadcaster, *_plot, on_event);
@@ -76,9 +76,9 @@ plot :: (msaa : bool = true, highdpi: bool = false, callback: ()->() = _empty) {
 #scope_module
 
 on_event :: (plot: *Plot, event: *Event) {
-    if event.event_type == {
-        case .BUTTON;
-            e := cast(*EventButton)event;
+    if event.type == {
+        case Event_Button;
+            e := cast(*Event_Button)event;
             if e.button_event_type != .PRESSED then return;
             
             for b, i: _plot.buttons {

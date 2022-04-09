@@ -9,27 +9,27 @@
 //  ######   ##     ## ##     ## ##        ##     ##    ######### ########
 
 
-Graph2DTypes :: Type.[
-    Graph2D_Line,
-    Graph2D_Bars,
-    Graph2D_Symbols,
-    Graph2D_Fill,
-    Graph2D_Boxes,
-    Graph2D_Multi
+Graph_2D_Types :: Type.[
+    Graph_2D_Line,
+    Graph_2D_Bars,
+    Graph_2D_Symbols,
+    Graph_2D_Fill,
+    Graph_2D_Boxes,
+    Graph_2D_Multi
 ];
 
-Graph2D :: struct {
+Graph_2D :: struct {
     type: Type;
 }
 
-draw :: (b: *Graph2D, x_mapper: *Mapper, y_mapper: *Mapper) {
-    #insert #run specialize(Graph2D, Graph2DTypes, "draw", .["x_mapper", "y_mapper"]);
+draw :: (b: *Graph_2D, x_mapper: *Mapper, y_mapper: *Mapper) {
+    #insert #run specialize(Graph_2D, Graph_2D_Types, "draw", .["x_mapper", "y_mapper"]);
 }
-bounds_x :: (b: *Graph2D) -> float32, float32 {
-    #insert #run specialize(Graph2D, Graph2DTypes, "bounds_x", num_rets=2);
+bounds_x :: (b: *Graph_2D) -> float32, float32 {
+    #insert #run specialize(Graph_2D, Graph_2D_Types, "bounds_x", num_rets=2);
 }
-bounds_y :: (b: *Graph2D) -> float32, float32 {
-    #insert #run specialize(Graph2D, Graph2DTypes, "bounds_y", num_rets=2);
+bounds_y :: (b: *Graph_2D) -> float32, float32 {
+    #insert #run specialize(Graph_2D, Graph_2D_Types, "bounds_y", num_rets=2);
 }
 
 
@@ -42,17 +42,17 @@ bounds_y :: (b: *Graph2D) -> float32, float32 {
 // ##        ##  ##   ### ##
 // ######## #### ##    ## ########
 
-Graph2D_Line :: struct {
-    using _s : Graph2D;
+Graph_2D_Line :: struct {
+    using _s : Graph_2D;
     x: []float32;
     y: []float32;
     color: Color;
     thickness: float32;
 }
 #scope_export
-line :: (x: []float32, y: []float32, color: Color = RED, thickness: float32 = 2.0) -> *Graph2D_Line {
-    res := New(Graph2D_Line);
-    res.type = Graph2D_Line;
+line :: (x: []float32, y: []float32, color: Color = RED, thickness: float32 = 2.0) -> *Graph_2D_Line {
+    res := New(Graph_2D_Line);
+    res.type = Graph_2D_Line;
     res.x = x;
     res.y = y;
     res.color = color;
@@ -60,7 +60,7 @@ line :: (x: []float32, y: []float32, color: Color = RED, thickness: float32 = 2.
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph2D_Line, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Line, x_mapper: *Mapper, y_mapper: *Mapper) {
     mx := map(x_mapper, x);
     my := map(y_mapper, y);
     defer {
@@ -69,10 +69,10 @@ draw :: (using graph: *Graph2D_Line, x_mapper: *Mapper, y_mapper: *Mapper) {
     }
     DrawLines(mx, my, color, thickness);
 }
-bounds_x :: inline (using graph: *Graph2D_Line) -> float32, float32 {
+bounds_x :: inline (using graph: *Graph_2D_Line) -> float32, float32 {
     return min(x), max(x);
 }
-bounds_y :: inline (using graph: *Graph2D_Line) -> float32, float32 {
+bounds_y :: inline (using graph: *Graph_2D_Line) -> float32, float32 {
     return min(y), max(y);
 }
 
@@ -85,8 +85,8 @@ bounds_y :: inline (using graph: *Graph2D_Line) -> float32, float32 {
 // ##        ##  ##       ##
 // ##       #### ######## ########
 
-Graph2D_Fill :: struct {
-    using _s : Graph2D;
+Graph_2D_Fill :: struct {
+    using _s : Graph_2D;
     x: []float32;
     y1: []float32;
     y2: []float32;
@@ -98,9 +98,9 @@ FillDirection :: enum u8 {
     X;
     Y;
 }
-fill :: (direction: FillDirection, x: []float32, y1: []float32, y2: []float32 = .[], color: Color = RED) -> *Graph2D_Fill {
-    res := New(Graph2D_Fill);
-    res.type = Graph2D_Fill;
+fill :: (direction: FillDirection, x: []float32, y1: []float32, y2: []float32 = .[], color: Color = RED) -> *Graph_2D_Fill {
+    res := New(Graph_2D_Fill);
+    res.type = Graph_2D_Fill;
     res.x = x;
     res.y1 = y1;
     res.y2 = y2;
@@ -109,7 +109,7 @@ fill :: (direction: FillDirection, x: []float32, y1: []float32, y2: []float32 = 
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
     mx  := map(x_mapper, x);
     my1 := map(y_mapper, y1);
     my2 := map(y_mapper, y2);
@@ -152,10 +152,10 @@ draw :: (using graph: *Graph2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
 
     DrawTriangleStrip(pts, color);
 }
-bounds_x :: inline (using graph: *Graph2D_Fill) -> float32, float32 {
+bounds_x :: inline (using graph: *Graph_2D_Fill) -> float32, float32 {
     return min(x), max(x);
 }
-bounds_y :: inline (using graph: *Graph2D_Fill) -> float32, float32 {
+bounds_y :: inline (using graph: *Graph_2D_Fill) -> float32, float32 {
     if y2.count == 0 then return min(y1), max(y1);
     return min(min(y1), min(y2)), max(max(y1), max(y2));
 }
@@ -203,8 +203,8 @@ init_symbol_texture :: () {
         });
     }
 }
-Graph2D_Symbols :: struct {
-    using _s : Graph2D;
+Graph_2D_Symbols :: struct {
+    using _s : Graph_2D;
     x: []float32;
     y: []float32;
     color: Color;
@@ -212,9 +212,9 @@ Graph2D_Symbols :: struct {
     symbol: Symbols;
 }
 #scope_export
-symbols :: (x: []float32, y: []float32, symbol := Symbols.CIRCLE, color := RED, size: float32 = 4.0, symbol_resolution: s32 = 32) -> *Graph2D_Symbols {
-    res := New(Graph2D_Symbols);
-    res.type = Graph2D_Symbols;
+symbols :: (x: []float32, y: []float32, symbol := Symbols.CIRCLE, color := RED, size: float32 = 4.0, symbol_resolution: s32 = 32) -> *Graph_2D_Symbols {
+    res := New(Graph_2D_Symbols);
+    res.type = Graph_2D_Symbols;
     res.x = x;
     res.y = y;
     res.color = color;
@@ -223,7 +223,7 @@ symbols :: (x: []float32, y: []float32, symbol := Symbols.CIRCLE, color := RED, 
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph2D_Symbols, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper, y_mapper: *Mapper) {
     mx := map(x_mapper, x);
     my := map(y_mapper, y);
     defer {
@@ -236,10 +236,10 @@ draw :: (using graph: *Graph2D_Symbols, x_mapper: *Mapper, y_mapper: *Mapper) {
         DrawTextureEx(tex, vec2(mx[i],my[i]) - vec2(size,size), 0.0, size/(0.5*SYMBOL_SIZE), color);
     }
 }
-bounds_x :: inline (using graph: *Graph2D_Symbols) -> float32, float32 {
+bounds_x :: inline (using graph: *Graph_2D_Symbols) -> float32, float32 {
     return min(x), max(x);
 }
-bounds_y :: inline (using graph: *Graph2D_Symbols) -> float32, float32 {
+bounds_y :: inline (using graph: *Graph_2D_Symbols) -> float32, float32 {
     return min(y), max(y);
 }
 
@@ -260,17 +260,17 @@ BarType :: enum u8 {
     CONNECTED;
 }
 
-Graph2D_Bars :: struct {
-    using _s : Graph2D;
+Graph_2D_Bars :: struct {
+    using _s : Graph_2D;
     x: []float32;
     y: []float32;
     color: Color;
     bar_type: BarType;
 }
 #scope_export
-bars :: (x: []float32, y: []float32, color := SKYBLUE, bar_type: BarType = .SIMPLE) -> *Graph2D_Bars {
-    res := New(Graph2D_Bars);
-    res.type = Graph2D_Bars;
+bars :: (x: []float32, y: []float32, color := SKYBLUE, bar_type: BarType = .SIMPLE) -> *Graph_2D_Bars {
+    res := New(Graph_2D_Bars);
+    res.type = Graph_2D_Bars;
     res.color = color;
     res.bar_type = bar_type;
     res.x = x;
@@ -278,7 +278,7 @@ bars :: (x: []float32, y: []float32, color := SKYBLUE, bar_type: BarType = .SIMP
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph2D_Bars, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Bars, x_mapper: *Mapper, y_mapper: *Mapper) {
     mx := map(x_mapper, x);
     my := map(y_mapper, y);
     defer {
@@ -314,10 +314,10 @@ draw :: (using graph: *Graph2D_Bars, x_mapper: *Mapper, y_mapper: *Mapper) {
             }
     }
 }
-bounds_x :: inline (using graph: *Graph2D_Bars) -> float32, float32 {
+bounds_x :: inline (using graph: *Graph_2D_Bars) -> float32, float32 {
     return min(x), max(x);
 }
-bounds_y :: inline (using graph: *Graph2D_Bars) -> float32, float32 {
+bounds_y :: inline (using graph: *Graph_2D_Bars) -> float32, float32 {
     return min(y), max(y);
 }
 
@@ -335,8 +335,8 @@ bounds_y :: inline (using graph: *Graph2D_Bars) -> float32, float32 {
 // ##     ## ##     ##  ##   ##
 // ########   #######  ##     ##
 
-Graph2D_Boxes :: struct {
-    using _g : Graph2D;
+Graph_2D_Boxes :: struct {
+    using _g : Graph_2D;
     x1: []float32;
     x2: []float32;
     y1: []float32;
@@ -344,9 +344,9 @@ Graph2D_Boxes :: struct {
     color: Color;
 }
 #scope_export
-boxes :: (x1: []float32, y1: []float32, x2: []float32 = .[], y2: []float32 = .[], color := SKYBLUE) -> *Graph2D_Boxes {
-    res := New(Graph2D_Boxes);
-    res.type = Graph2D_Boxes;
+boxes :: (x1: []float32, y1: []float32, x2: []float32 = .[], y2: []float32 = .[], color := SKYBLUE) -> *Graph_2D_Boxes {
+    res := New(Graph_2D_Boxes);
+    res.type = Graph_2D_Boxes;
     res.color = color;
     res.x1 = x1;
     res.x2 = x2;
@@ -355,7 +355,7 @@ boxes :: (x1: []float32, y1: []float32, x2: []float32 = .[], y2: []float32 = .[]
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph2D_Boxes, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Boxes, x_mapper: *Mapper, y_mapper: *Mapper) {
     assert(x1.count != 0);
     assert(y1.count != 0);
     assert(x1.count == y1.count);
@@ -429,11 +429,11 @@ draw :: (using graph: *Graph2D_Boxes, x_mapper: *Mapper, y_mapper: *Mapper) {
         }
     }
 }
-bounds_x :: inline (using graph: *Graph2D_Boxes) -> float32, float32 {
+bounds_x :: inline (using graph: *Graph_2D_Boxes) -> float32, float32 {
     if x2.count == 0 then return min(x1), max(x1);
     return min(min(x1),min(x2)), max(max(x1),max(x2));
 }
-bounds_y :: inline (using graph: *Graph2D_Boxes) -> float32, float32 {
+bounds_y :: inline (using graph: *Graph_2D_Boxes) -> float32, float32 {
     if y2.count == 0 then return min(y1), max(y1);
     return min(min(y1),min(y2)), max(max(y1),max(y2));
 }
@@ -457,24 +457,24 @@ bounds_y :: inline (using graph: *Graph2D_Boxes) -> float32, float32 {
 // ##     ##  #######  ########    ##    ####
 
 #scope_module
-Graph2D_Multi :: struct {
-    using _s : Graph2D;
-    graphs2d: []*Graph2D;
+Graph_2D_Multi :: struct {
+    using _s : Graph_2D;
+    graphs2d: []*Graph_2D;
 }
 #scope_export
-multi :: (graphs2d: ..*Graph2D) -> *Graph2D_Multi {
-    res := New(Graph2D_Multi);
-    res.type = Graph2D_Multi;
+multi :: (graphs2d: ..*Graph_2D) -> *Graph_2D_Multi {
+    res := New(Graph_2D_Multi);
+    res.type = Graph_2D_Multi;
     res.graphs2d = graphs2d;
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph2D_Multi, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Multi, x_mapper: *Mapper, y_mapper: *Mapper) {
     for graphs2d {
         draw(it, x_mapper, y_mapper);
     }
 }
-bounds_x :: (using graph: *Graph2D_Multi) -> float32, float32 {
+bounds_x :: (using graph: *Graph_2D_Multi) -> float32, float32 {
     _min := Math.FLOAT32_MAX;
     _max := Math.FLOAT32_MIN;
 
@@ -486,7 +486,7 @@ bounds_x :: (using graph: *Graph2D_Multi) -> float32, float32 {
 
     return _min, _max;
 }
-bounds_y :: (using graph: *Graph2D_Multi) -> float32, float32 {
+bounds_y :: (using graph: *Graph_2D_Multi) -> float32, float32 {
     _min := Math.FLOAT32_MAX;
     _max := Math.FLOAT32_MIN;
 

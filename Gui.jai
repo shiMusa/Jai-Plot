@@ -9,27 +9,20 @@
 // ########   #######     ##       ##     #######  ##    ##
 
 
-ButtonStyle :: enum u8 {
-    FRAMED;
-    TAB_TOP;
-}
+Button_Types :: Type.[
+    Button_Framed,
+    Button_Tab
+];
 
 Button :: struct {
     using rect: Rectangle;
-    button_style: ButtonStyle;
+    type: Type;
 }
 is_over :: inline (button: *Button, position: Vector2) -> bool {
     return CheckCollisionPointRec(position, button.rect);
 }
-draw :: (button: *Button) {
-    if #complete button.button_style == {
-        case .FRAMED;
-            b := cast(*ButtonFramed)button;
-            draw(b);
-        case .TAB_TOP;
-            b := cast(*ButtonTab)button;
-            draw(b);
-    }
+draw :: (b: *Button) {
+    #insert #run specialize(Button, Button_Types, "draw");
 }
 
 
@@ -43,7 +36,7 @@ draw :: (button: *Button) {
 // ########   #######     ##       ##     #######  ##    ## ##       ##     ## ##     ## ##     ## ######## ########
 
 
-ButtonFramed :: struct {
+Button_Framed :: struct {
     using button: Button;
     text: string;
     font_size: s32;
@@ -53,9 +46,9 @@ ButtonFramed :: struct {
     is_over: bool = false;
     is_pressed: bool = false;
 }
-button_framed :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE) -> *ButtonFramed {
-    res := New(ButtonFramed);
-    res.button_style = .FRAMED;
+button_framed :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE) -> *Button_Framed {
+    res := New(Button_Framed);
+    res.type = Button_Framed;
     res.rect = rect;
     res.text = text;
     res.font_size = font_size;
@@ -66,18 +59,18 @@ button_framed :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color 
 
     return res;
 }
-on_event :: (button: *ButtonFramed, event: *Event) {
-    if event.event_type == {
-        case .MOUSE_POSITION;
-            e := cast(*EventMousePosition)event;
+on_event :: (button: *Button_Framed, event: *Event) {
+    if event.type == {
+        case Event_Mouse_Position;
+            e := cast(*Event_Mouse_Position)event;
             if is_over(button, e.position) {
                 broadcast(_broadcaster, event_button(button, .HOVER));
                 button.is_over = true;
             } else {
                 button.is_over = false;
             }
-        case .MOUSE_BUTTON;
-            e := cast(*EventMouseButton)event;
+        case Event_Mouse_Button;
+            e := cast(*Event_Mouse_Button)event;
             if is_over(button, e.position) {
                 if e.button_event_type == .PRESSED && e.button == 0 {
                     broadcast(_broadcaster, event_button(button, .PRESSED));
@@ -89,7 +82,7 @@ on_event :: (button: *ButtonFramed, event: *Event) {
             }
     }
 }
-draw :: (using button_framed: *ButtonFramed) {
+draw :: (using button_framed: *Button_Framed) {
     text_width := MeasureText(text, font_size);
 
     tx := cast(s32)(rect.width  * 0.5 + rect.x - 0.5 * text_width);
@@ -131,7 +124,7 @@ TabPosition :: enum u8 {
     RIGHT;
 }
 
-ButtonTab :: struct {
+Button_Tab :: struct {
     using button: Button;
     text: string;
     font_size: s32;
@@ -144,9 +137,9 @@ ButtonTab :: struct {
     is_over: bool = false;
     is_pressed: bool = false;
 }
-button_tab :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE, tab_position: TabPosition = .TOP) -> *ButtonTab {
-    res := New(ButtonTab);
-    res.button_style = .TAB_TOP;
+button_tab :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE, tab_position: TabPosition = .TOP) -> *Button_Tab {
+    res := New(Button_Tab);
+    res.type = Button_Tab;
     res.rect = rect;
     res.text = text;
     res.font_size = font_size;
@@ -159,18 +152,18 @@ button_tab :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := 
 
     return res;
 }
-on_event :: (button: *ButtonTab, event: *Event) {
-    if event.event_type == {
-        case .MOUSE_POSITION;
-            e := cast(*EventMousePosition)event;
+on_event :: (button: *Button_Tab, event: *Event) {
+    if event.type == {
+        case Event_Mouse_Position;
+            e := cast(*Event_Mouse_Position)event;
             if is_over(button, e.position) {
                 broadcast(_broadcaster, event_button(button, .HOVER));
                 button.is_over = true;
             } else {
                 button.is_over = false;
             }
-        case .MOUSE_BUTTON;
-            e := cast(*EventMouseButton)event;
+        case Event_Mouse_Button;
+            e := cast(*Event_Mouse_Button)event;
             if is_over(button, e.position) {
                 if e.button_event_type == .PRESSED && e.button == 0 {
                     broadcast(_broadcaster, event_button(button, .PRESSED));
@@ -182,7 +175,7 @@ on_event :: (button: *ButtonTab, event: *Event) {
             }
     }
 }
-draw :: (using button_framed: *ButtonTab) {
+draw :: (using button_framed: *Button_Tab) {
     text_width := MeasureText(text, font_size);
 
     tx := cast(s32)(rect.width  * 0.5 + rect.x - 0.5 * text_width);
