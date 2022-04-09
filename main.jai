@@ -33,6 +33,7 @@ simulation :: () {
             w[i] = -1.0  * Math.sin(cast(float32)(t/16.0 * PI) + x[i]/4.0 * cast(float32)PI);
 
             y2[i] = y[i] + 0.6;
+            y_shift[i] =  1.25 * Math.sin(cast(float32)(t/10.0 * PI) + (x[i] + 2.0)/5.0 * cast(float32)PI);
         }
 
 
@@ -65,6 +66,7 @@ x : [N]float32;
 x2 : [N]float32;
 y : [N]float32;
 y2 : [N]float32;
+y_shift : [N]float32;
 z : [N]float32;
 w : [N]float32;
 u : [N]float32;
@@ -104,9 +106,18 @@ main :: () {
         add_page(page_single(axis_2d_cartesian(x_mapper, y_mapper, "fills")));
 
         plot2d(multi(
-            fill(.X,x,y,color=SKYBLUE), 
-            symbols(x,y,color=BLUE),
-            symbols(x,y,size=2.0,color=RAYWHITE)
+            fill(x,y,y2,color=SKYBLUE), 
+            symbols(x,y2,color=BLUE),
+            symbols(x,y2,size=2.0,color=RAYWHITE)
+        ));
+
+        c := BEIGE;
+        c.a = 125;
+
+        plot2d(multi(
+            fill(x,y,y_shift,color=c), 
+            symbols(x,y_shift,color=BROWN),
+            symbols(x,y_shift,size=2.0,color=RAYWHITE)
         ));
     }
 

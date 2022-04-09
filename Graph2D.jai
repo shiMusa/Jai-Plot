@@ -91,26 +91,24 @@ Graph_2D_Fill :: struct {
     y1: []float32;
     y2: []float32;
     color: Color;
-    direction: FillDirection;
 }
 #scope_export
-FillDirection :: enum u8 {
-    X;
-    Y;
-}
-fill :: (direction: FillDirection, x: []float32, y1: []float32, y2: []float32 = .[], color: Color = RED) -> *Graph_2D_Fill {
+fill :: (x: []float32, y1: []float32, y2: []float32 = .[], color: Color = RED) -> *Graph_2D_Fill {
     res := New(Graph_2D_Fill);
     res.type = Graph_2D_Fill;
     res.x = x;
     res.y1 = y1;
-    res.y2 = y2;
+    if y2.count == 0 {
+        res.y2 = NewArray(y1.count, float32);
+    } else {
+        res.y2 = y2;
+    }
     res.color = color;
-    res.direction = direction;
     return res;
 }
 #scope_module
 draw :: (using graph: *Graph_2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
-    mx  := map(x_mapper, x);
+    mx  := map(x_mapper, x );
     my1 := map(y_mapper, y1);
     my2 := map(y_mapper, y2);
     defer {
@@ -118,36 +116,46 @@ draw :: (using graph: *Graph_2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
         array_free(my1);
         array_free(my2);
     }
+
     zero := vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
 
-    pts := NewArray(mx.count * 2, Vector2);
+    // create 1.1 * necessary points to account for probable zero-crossings
+    pts := NewResizableArray(cast(s32)(1.1*mx.count*2), Vector2, false);
     defer array_free(pts);
 
-    if #complete direction == {
-        case .X;
-            if my2.count == 0 {
-                for i: 0..mx.count-1 {
-                    pts[2*i  ] = vec2(mx[i], min(my1[i], zero.y));
-                    pts[2*i+1] = vec2(mx[i], max(my1[i], zero.y));
-                }
+    for i: 0..mx.count-1 {
+        if i != mx.count-1 {
+            if (y2[i+1]-y1[i+1])*(y2[i]-y1[i]) < 0.0 {
+
+                // a1*x+b1 = a2*x+b2
+                // => (a1-a2)*x = b2-b1
+                // => x = (b2-b1)/(a1-a2)
+                a1 := (y1[i+1]-y1[i])/(x[i+1]-x[i]);
+                a2 := (y2[i+1]-y2[i])/(x[i+1]-x[i]);
+                _x := (y2[i]-y1[i])/(a1-a2);
+                _y := y1[i] + _x * a1;
+
+                extra := vec2(map(x_mapper, _x + x[i]), map(y_mapper, _y));
+
+                array_add(*pts,
+                    vec2(mx[i], min(my1[i], my2[i])),
+                    vec2(mx[i], max(my1[i], my2[i])),
+                    extra,
+                    extra
+                );
+
             } else {
-                for i: 0..mx.count-1 {
-                    pts[2*i  ] = vec2(mx[i], min(my1[i], my2[i]));
-                    pts[2*i+1] = vec2(mx[i], max(my1[i], my2[i]));
-                }
+                array_add(*pts,
+                    vec2(mx[i], min(my1[i], my2[i])),
+                    vec2(mx[i], max(my1[i], my2[i])) 
+                );
             }
-        case .Y;
-            if my2.count == 0 {
-                for i: 0..mx.count-1 {
-                    pts[2*i  ] = vec2(min(my1[i], zero.y), mx[i]);
-                    pts[2*i+1] = vec2(max(my1[i], zero.y), mx[i]);
-                }
-            } else {
-                for i: 0..mx.count-1 {
-                    pts[2*i  ] = vec2(min(my1[i], my2[i]), mx[i]);
-                    pts[2*i+1] = vec2(max(my1[i], my2[i]), mx[i]);
-                }
-            }
+        } else {
+            array_add(*pts,
+                vec2(mx[i], min(my1[i], my2[i])),
+                vec2(mx[i], max(my1[i], my2[i])) 
+            );
+        }
     }
 
     DrawTriangleStrip(pts, color);
