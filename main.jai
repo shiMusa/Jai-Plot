@@ -88,7 +88,7 @@ main :: () {
         y_mapper := mapper_constraint(mapper_linear()     , min_x = -2.0, max_x =   2.0);
         add_page(page_single(axis_2d_cartesian(x_mapper, y_mapper, "waves")));
 
-        plot2d(bars(x,w,Color.{ 211, 176, 131, 125 }));
+        plot2d(bars(x,w,transparency(BEIGE, 0.5)));
         plot2d(multi(
             line(x,y,RAYWHITE, 6.0), 
             line(x,y,BLUE)
@@ -111,11 +111,8 @@ main :: () {
             symbols(x,y2,size=2.0,color=RAYWHITE)
         ));
 
-        c := BEIGE;
-        c.a = 125;
-
         plot2d(multi(
-            fill(x,y,y_shift,color=c), 
+            fill(x,y,y_shift,color=transparency(BEIGE, 0.5)), 
             symbols(x,y_shift,color=BROWN),
             symbols(x,y_shift,size=2.0,color=RAYWHITE)
         ));
