@@ -151,6 +151,17 @@ main :: () {
         plot2d(boxes(x, y, x2, y2, SKYBLUE));
     }
 
+    {
+        add_page(page_single(axis_2d_cartesian(title="error bars"), "errors"));
+
+        plot2d(multi(
+            line(x, y),
+            error_bars(x, y, y2),
+            symbols(x, y),
+            symbols(x, y, size=2.0, color=RAYWHITE)
+        ));
+    }
+
 
     simulation();
 

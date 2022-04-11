@@ -15,7 +15,8 @@ Graph_2D_Types :: Type.[
     Graph_2D_Symbols,
     Graph_2D_Fill,
     Graph_2D_Boxes,
-    Graph_2D_Multi
+    Graph_2D_Multi,
+    Graph_2D_Error_Y
 ];
 
 Graph_2D :: struct {
@@ -332,6 +333,61 @@ bounds_y :: inline (using graph: *Graph_2D_Bars) -> float32, float32 {
 
 
 
+// ######## ########  ########   #######  ########
+// ##       ##     ## ##     ## ##     ## ##     ##
+// ##       ##     ## ##     ## ##     ## ##     ##
+// ######   ########  ########  ##     ## ########
+// ##       ##   ##   ##   ##   ##     ## ##   ##
+// ##       ##    ##  ##    ##  ##     ## ##    ##
+// ######## ##     ## ##     ##  #######  ##     ##
+
+Graph_2D_Error_Y :: struct {
+    using _g : Graph_2D;
+    x: []float32;
+    low: []float32;
+    high: []float32;
+    color: Color;
+    thickness: float32;
+    size: float32;
+}
+#scope_export
+error_bars :: (x: []float32, low: []float32, high: []float32, thickness: float32 = 1.0, size: float32 = 10.0, color := RED) -> *Graph_2D_Error_Y {
+    assert(x.count ==  low.count);
+    assert(x.count == high.count);
+    res := New(Graph_2D_Error_Y);
+    res.type = Graph_2D_Error_Y;
+    res.x = x;
+    res.low = low;
+    res.high = high;
+    res.thickness = thickness;
+    res.color = color;
+    res.size = size;
+    return res;
+}
+#scope_module
+draw :: (using graph: *Graph_2D_Error_Y, x_mapper: *Mapper, y_mapper: *Mapper) {
+    mx := map(x_mapper, x);
+    mlow := map(y_mapper, low);
+    mhigh := map(y_mapper, high);
+    defer {
+        array_free(mx);
+        array_free(mlow);
+        array_free(mhigh);
+    }
+    zero := vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
+
+    for i: 0..x.count-1 {
+        DrawLineEx(vec2(mx[i], mhigh[i]), vec2(mx[i], mlow[i]), thickness, color);
+        DrawLineEx(vec2(mx[i]-0.5*size, mhigh[i]), vec2(mx[i]+0.5*size, mhigh[i]), thickness, color);
+        DrawLineEx(vec2(mx[i]-0.5*size,  mlow[i]), vec2(mx[i]+0.5*size,  mlow[i]), thickness, color);
+    }
+}
+bounds_x :: inline (using graph: *Graph_2D_Error_Y) -> float32, float32 {
+    return min(x), max(x);
+}
+bounds_y :: inline (using graph: *Graph_2D_Error_Y) -> float32, float32 {
+    return min(low), max(high);
+}
 
 
 
