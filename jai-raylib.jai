@@ -184,6 +184,21 @@ color :: (r:u8=0, g:u8=0, b:u8=0, a:u8=255) -> Color {
     res.a = a;
     return res;
 }
+transparency :: (c: Color, alpha: float32) -> Color {
+    res := c;
+    res.a = cast(u8)(alpha * res.a);
+    return res;
+}
+brightness :: (c: Color, brightness: float32) -> Color {
+    a := res.a;
+    res *= brightness;
+    res.a = a;
+    return res;
+}
+
+
+
+
 operator + :: (a: Vector2, b: Vector2) -> Vector2 {
     res : Vector2 = ---;
     res.x = a.x + b.x;

@@ -8,133 +8,49 @@
 // ##     ## ##     ## ##        ##        ##        ##       ##    ##
 // ##     ## ##     ## ##        ##        ##        ######## ##     ##
 
+Mapper_Types :: Type.[
+    Mapper_Linear,
+    Mapper_Logarithmic,
+    Mapper_Constraint
+];
 
-Mapper_Type :: enum u8 {
-    LINEAR;
-    CONSTRAINT;
-    LOGARITHMIC;
-}
+
 #scope_export
 Mapper :: struct {
-    type: Mapper_Type = .LINEAR;
+    type: Type;
 }
 #scope_module
-clone :: (m: *Mapper) -> *Mapper {
-    if m.type == {
-        case .LINEAR;
-            lm := cast(*Mapper_Linear)m;
-            return cast(*Mapper)clone(lm);
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)m;
-            return cast(*Mapper)clone(cm);
-        case .LOGARITHMIC;
-            ml := cast(*Mapper_Logarithmic)m;
-            return cast(*Mapper)clone(ml);
-    }
+clone :: (b: *Mapper) -> *Mapper {
+    #insert #run specialize(Mapper_Types, "clone", .[], 1);
 }
-get_inner_type :: (m: *Mapper) -> Mapper_Type {
-    if m.type == {
-        case .LINEAR; #through;
-        case .LOGARITHMIC;
-            return m.type;
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)m;
-            return get_inner_type(cm.inner);
-    }
+get_inner_type :: (b: *Mapper) -> Type {
+    #insert #run specialize(Mapper_Types, "get_inner_type", .[], 1);
 }
-map :: (m: *Mapper, x: []float32) -> []float32 {
+map :: (b: *Mapper, x: []float32) -> []float32 {
     res := NewArray(x.count, float32, false);
-    if m.type == {
-        case .LINEAR;
-            lm := cast(*Mapper_Linear)m;
-            for *res {
-                <<it = map(lm, x[it_index]);
-            }
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)m;
-            for *res {
-                <<it = map(cm, x[it_index]);
-            }
-        case .LOGARITHMIC;
-            ml := cast(*Mapper_Logarithmic)m;
-            for *res {
-                <<it = map(ml, x[it_index]);
-            }
+    for x {
+        res[it_index] = map(b, it);
     }
     return res;
 }
-map :: (m: *Mapper, x: float32) -> float32 {
-    if m.type == {
-        case .LINEAR;
-            lm := cast(*Mapper_Linear)m;
-            return map(lm, x);
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)m;
-            return map(cm, x);
-        case .LOGARITHMIC;
-            ml := cast(*Mapper_Logarithmic)m;
-            return map(ml, x);
-    }
+map :: (b: *Mapper, x: float32) -> float32 {
+    #insert #run specialize(Mapper_Types, "map", .["x"], 1);
 }
-map_inv :: (m: *Mapper, y: []float32) -> []float32 {
+map_inv :: (b: *Mapper, y: []float32) -> []float32 {
     res := NewArray(x.count, float32, false);
-    if m.type == {
-        case .LINEAR;
-            lm := cast(*Mapper_Linear)m;
-            for *res {
-                <<it = map_inv(lm, x[it_index]);
-            }
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)m;
-            for *res {
-                <<it = map_inv(cm, x[it_index]);
-            }
-        case .LOGARITHMIC;
-            ml := cast(*Mapper_Logarithmic)m;
-            for *res {
-                <<it = map_inv(ml, x[it_index]);
-            }
+    for x {
+        res[it_index] = map_inv(b, it);
     }
     return res;
 }
-map_inv :: (m: *Mapper, y: float32) -> float32 {
-    if m.type == {
-        case .LINEAR;
-            lm := cast(*Mapper_Linear)m;
-            return map_inv(lm, y);
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)m;
-            return map_inv(cm, y);
-        case .LOGARITHMIC;  
-            ml := cast(*Mapper_Logarithmic)m;
-            return map_inv(ml, y);
-    }
+map_inv :: (b: *Mapper, y: float32) -> float32 {
+    #insert #run specialize(Mapper_Types, "map_inv", .["y"], 1);
 }
-fit :: (m: *Mapper, x: float32, y: float32) {
-    if m.type == {
-        case .LINEAR;
-            lm := cast(*Mapper_Linear)m;
-            fit(lm, x, y);
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)m;
-            fit(cm, x, y);
-        case .LOGARITHMIC;
-            ml := cast(*Mapper_Logarithmic)m;
-            fit(ml, x, y);
-    }
+fit :: (b: *Mapper, x: float32, y: float32) {
+    #insert #run specialize(Mapper_Types, "fit", .["x", "y"]);
 }
-fit_bounds :: (m: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y: float32, overwrite_constraints: bool = false) {
-    if m.type ==  {
-        case .LINEAR;
-            lm := cast(*Mapper_Linear)m;
-            fit_bounds(lm, min_x, max_x, min_y, max_y);
-        case .CONSTRAINT;
-            cm := cast(*Mapper_Constraint)m;
-            fit_bounds(cm, min_x, max_x, min_y, max_y, overwrite_constraints);
-        case .LOGARITHMIC;
-            ml := cast(*Mapper_Logarithmic)m;
-            fit_bounds(ml, min_x, max_x, min_y, max_y);
-    }
+fit_bounds :: (b: *Mapper, min_x: float32, max_x: float32, min_y: float32, max_y: float32, overwrite_constraints: bool = false) {
+    #insert #run specialize(Mapper_Types, "fit_bounds", .["min_x", "max_x", "min_y", "max_y", "overwrite_constraints"]);
 }
 
 
@@ -158,7 +74,7 @@ Mapper_Linear :: struct {
 #scope_module
 clone :: (m: *Mapper_Linear) -> *Mapper_Linear {
     res := New(Mapper_Linear);
-    res.type = .LINEAR;
+    res.type = Mapper_Linear;
     res.y0 = m.y0;
     res.dydx = m.dydx;
     return res;
@@ -166,7 +82,7 @@ clone :: (m: *Mapper_Linear) -> *Mapper_Linear {
 #scope_export
 mapper_linear :: (y0: float = 0.0, dydx: float32 = 1.0) -> *Mapper_Linear {
     res := New(Mapper_Linear);
-    res.type = .LINEAR;
+    res.type = Mapper_Linear;
     res.y0 = y0;
     res.dydx = dydx;
     return res;
@@ -188,10 +104,13 @@ fit :: inline (lm: *Mapper_Linear, x: float32, y: float32) {
     yt := map(lm, x);
     lm.y0 += y-yt;
 }
-fit_bounds :: (using lm: *Mapper_Linear, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
+fit_bounds :: (using lm: *Mapper_Linear, min_x: float32, max_x: float32, min_y: float32, max_y: float32, overwrite_constraints: bool) {
     dydx = (max_y-min_y)/(max_x-min_x);
     // dydx * max_x + y0 = max_y => y0 = max_y - dydx * max_x
     y0 = max_y - dydx * max_x;
+}
+get_inner_type :: inline (m: *Mapper_Linear) -> Type {
+    return Mapper_Linear;
 }
 
 
@@ -214,7 +133,7 @@ Mapper_Logarithmic :: struct {
 #scope_module
 clone :: (m: *Mapper_Logarithmic) -> *Mapper_Logarithmic {
     res := New(Mapper_Logarithmic);
-    res.type = .LOGARITHMIC;
+    res.type = Mapper_Logarithmic;
     res.mapper_linear = clone(m.mapper_linear);
     res.base = m.base;
     res.invlogbase = m.invlogbase;
@@ -223,7 +142,7 @@ clone :: (m: *Mapper_Logarithmic) -> *Mapper_Logarithmic {
 #scope_export
 mapper_logarithmic :: (base: float32 = 10.0) -> *Mapper_Logarithmic {
     res := New(Mapper_Logarithmic);
-    res.type = .LOGARITHMIC;
+    res.type = Mapper_Logarithmic;
     res.mapper_linear = mapper_linear();
     res.base = base;
     res.invlogbase = 1.0/Math.log(base);
@@ -240,7 +159,7 @@ map_inv :: inline (using ml: *Mapper_Logarithmic, y: float32) -> float32 {
 fit :: (using ml: *Mapper_Logarithmic, x: float32, y: float32) {
     fit(mapper_linear, Math.log(x)*invlogbase, y);
 }
-fit_bounds :: (using ml: *Mapper_Logarithmic, min_x: float32, max_x: float32, min_y: float32, max_y: float32) {
+fit_bounds :: (using ml: *Mapper_Logarithmic, min_x: float32, max_x: float32, min_y: float32, max_y: float32, overwrite_constraints: bool) {
     if min_x <= 0.0 then return;
     if Math.isinf(max_x) then return;
     fit_bounds(
@@ -249,6 +168,9 @@ fit_bounds :: (using ml: *Mapper_Logarithmic, min_x: float32, max_x: float32, mi
         Math.log(max_x)*invlogbase,
         min_y, max_y
     );
+}
+get_inner_type :: inline (m: *Mapper_Logarithmic) -> Type {
+    return Mapper_Logarithmic;
 }
 
 
@@ -272,7 +194,7 @@ Mapper_Constraint :: struct {
 #scope_module
 clone :: (m: *Mapper_Constraint) -> *Mapper_Constraint {
     res := New(Mapper_Constraint);
-    res.type = .CONSTRAINT; 
+    res.type = Mapper_Constraint; 
     res.inner = clone(m.inner);
     res.fixed_min_x = m.fixed_min_x;
     res.fixed_max_x = m.fixed_max_x;
@@ -293,7 +215,7 @@ mapper_constraint :: (
     max_y: float32 = Math.FLOAT32_NAN
 ) -> *Mapper_Constraint {
     res := New(Mapper_Constraint);
-    res.type = .CONSTRAINT;
+    res.type = Mapper_Constraint;
     res.inner = inner;
 
     if !Math.isnan(min_x) { res.min_x = min_x; res.fixed_min_x = true; }
@@ -337,5 +259,9 @@ fit_bounds :: (cm: *Mapper_Constraint, min_x: float32, max_x: float32, min_y: fl
 
     fit_bounds(cm.inner, mi_x, ma_x, mi_y, ma_y, overwrite_constraints);
 }
+get_inner_type :: inline (m: *Mapper_Constraint) -> Type {
+    return get_inner_type(m.inner);
+}
+
 
 

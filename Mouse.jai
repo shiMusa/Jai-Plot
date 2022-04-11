@@ -10,7 +10,7 @@
 // ##     ##  #######   #######   ######  ########
 
 
-MouseStateTypes :: Type.[
+MouseState_Types :: Type.[
     MouseState_Free,
     MouseState_Dragging,
     MouseState_RMB_Dragging
@@ -24,7 +24,7 @@ MouseState :: struct {
 }
 
 draw :: (b: *MouseState) {
-    #insert #run specialize(MouseState, MouseStateTypes, "draw");
+    #insert #run specialize(MouseState_Types, "draw");
 }
 
 
@@ -49,9 +49,9 @@ mouse_stop_free :: (mouse: *MouseState_Free) {
     unsubscribe(_broadcaster, mouse);
 }
 on_event :: (using mouse: *MouseState_Free, event: *Event) {
-    if event.event_type == {
-        case .AXIS;
-            e := cast(*EventAxis)event;
+    if event.type == {
+        case Event_Axis;
+            e := cast(*Event_Axis)event;
             if e.axis_event_type == {
                 case .MOVE;
                     mouse_stop_free(mouse);
@@ -69,9 +69,9 @@ MouseState_Dragging :: struct {
     using mouse_state: MouseState;
     old_x: float32 = 0.0;
     old_y: float32 = 0.0;
-    axis: *CartesianAxis2D;
+    axis: *Axis_2D_Cartesian;
 }
-mouse_dragging :: (using axis: *CartesianAxis2D) -> *MouseState_Dragging {
+mouse_dragging :: (using axis: *Axis_2D_Cartesian) -> *MouseState_Dragging {
     using inner_rect;
 
     res := New(MouseState_Dragging);
@@ -80,8 +80,8 @@ mouse_dragging :: (using axis: *CartesianAxis2D) -> *MouseState_Dragging {
     res.y = cast(float32)GetMouseY();
     res.axis = axis;
 
-    mx := ifx x_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)x_mapper).inner else x_mapper;
-    my := ifx y_mapper.type == .CONSTRAINT then (cast(*Mapper_Constraint)y_mapper).inner else y_mapper;
+    mx := ifx x_mapper.type == Mapper_Constraint then (cast(*Mapper_Constraint)x_mapper).inner else x_mapper;
+    my := ifx y_mapper.type == Mapper_Constraint then (cast(*Mapper_Constraint)y_mapper).inner else y_mapper;
     res.old_x = map_inv(mx, cast(float32)res.x);
     res.old_y = map_inv(my, cast(float32)res.y);
 
@@ -94,17 +94,17 @@ mouse_dragging :: (using axis: *CartesianAxis2D) -> *MouseState_Dragging {
 }
 draw :: (mouse: *MouseState_Dragging) {}
 on_event :: (using mouse: *MouseState_Dragging, event: *Event) {
-    if event.event_type == {
-        case. MOUSE_POSITION;
-            e := cast(*EventMousePosition)event;
+    if event.type == {
+        case Event_Mouse_Position;
+            e := cast(*Event_Mouse_Position)event;
             x = e.position.x;
             y = e.position.y;
             mx := cast(*Mapper_Constraint)axis.x_mapper;
             my := cast(*Mapper_Constraint)axis.y_mapper;
             fit(mx, old_x, x);
             fit(my, old_y, y);
-        case .MOUSE_BUTTON;
-            e := cast(*EventMouseButton)event;
+        case Event_Mouse_Button;
+            e := cast(*Event_Mouse_Button)event;
             if e.button == 0 && e.button_event_type == .RELEASED {
                 mouse_stop_dragging(mouse);
                 _mouse = cast(*MouseState)mouse_free();
@@ -122,9 +122,9 @@ mouse_stop_dragging :: (using mouse: *MouseState_Dragging) {
 MouseState_RMB_Dragging :: struct {
     using mouse_state: MouseState;
     old_x, old_y: float32;
-    axis: *CartesianAxis2D;
+    axis: *Axis_2D_Cartesian;
 }
-mouse_rmb_dragging :: (axis: *CartesianAxis2D) -> *MouseState_RMB_Dragging {
+mouse_rmb_dragging :: (axis: *Axis_2D_Cartesian) -> *MouseState_RMB_Dragging {
     res := New(MouseState_RMB_Dragging);
     res.type = MouseState_RMB_Dragging;
     res.x = cast(float32)GetMouseX();
@@ -138,13 +138,13 @@ mouse_rmb_dragging :: (axis: *CartesianAxis2D) -> *MouseState_RMB_Dragging {
     return res;
 }
 on_event :: (using mouse: *MouseState_RMB_Dragging, event: *Event) {
-    if event.event_type == {
-        case. MOUSE_POSITION;
-            e := cast(*EventMousePosition)event;
+    if event.type == {
+        case Event_Mouse_Position;
+            e := cast(*Event_Mouse_Position)event;
             x = e.position.x;
             y = e.position.y;
-        case .MOUSE_BUTTON;
-            e := cast(*EventMouseButton)event;
+        case Event_Mouse_Button;
+            e := cast(*Event_Mouse_Button)event;
             if e.button == 1 && e.button_event_type == .RELEASED {
                 mouse_stop_dragging(mouse);
                 _mouse = cast(*MouseState)mouse_free();

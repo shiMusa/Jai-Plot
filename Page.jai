@@ -8,38 +8,26 @@
 // ##        ##     ## ##    ##  ##
 // ##        ##     ##  ######   ########
 
-Page_Type :: enum u8 {
-    SINGLE;
-}
+Page_Types :: Type.[
+    Page_Single
+];
+
+
 Page :: struct {
     page_rectangle: Rectangle;
-    page_type: Page_Type;
+    type: Type;
     page_title: string;
     activated: bool;
 }
 activate :: (page: *Page) {
     page.activated = true;
     _plot.active_page = cast(*Page)page;
-
-    if page.page_type == {
-        case .SINGLE;
-            p := cast(*Page_Single)page;
-            activate(p.axis);
-    }
 }
-draw :: (page: *Page) {
-    if page.page_type == {
-        case .SINGLE;
-            p := cast(*Page_Single)page;
-            draw(p);
-    }
+draw :: (b: *Page) {
+    #insert #run specialize(Page_Types, "draw");
 }
-intersection_axis :: (page: *Page, pos: Vector2) -> *Axis {
-    if page.page_type == {
-        case .SINGLE;
-            p := cast(*Page_Single)page;
-            return cast(*Axis)intersection_axis(p, pos);
-    }
+intersection_axis :: (b: *Page, pos: Vector2) -> *Axis {
+    #insert #run specialize(Page_Types, "intersection_axis", .["pos"], 1);
 }
 
 
@@ -58,7 +46,7 @@ Page_Single :: struct {
 #scope_export
 page_single :: (axis: *Axis, page_title: string = "", activate_axis: bool = true) -> *Page_Single {
     res := New(Page_Single);
-    res.page_type = .SINGLE;
+    res.type = Page_Single;
     res.page_title = page_title;
     res.activated = false;
     res.axis = axis;
@@ -71,9 +59,9 @@ page_single :: (axis: *Axis, page_title: string = "", activate_axis: bool = true
 }
 #scope_module
 page_single_on_event :: (page: *Page_Single, event: *Event) {
-    if event.event_type == {
-        case .PLOT;
-            e := cast(*EventPlot)event;
+    if event.type == {
+        case Event_Plot;
+            e := cast(*Event_Plot)event;
             page.activated = cast(*Page)page == e.page;
             page.axis.activated = page.activated;
     }

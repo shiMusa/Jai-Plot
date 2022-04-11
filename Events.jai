@@ -49,38 +49,21 @@ broadcast :: (bus: Broadcaster, event: *Event, consume_event: bool = true) {
 // ##         ## ##   ##       ##   ###    ##    ##    ##
 // ########    ###    ######## ##    ##    ##     ######
 
+Event_Types :: Type.[
+    Event_Mouse_Position,
+    Event_Mouse_Button,
+    Event_Mouse_Wheel,
+    Event_Axis,
+    Event_Button,
+    Event_Plot
+];
 
-EventType :: enum u8 {
-    MOUSE_POSITION;
-    MOUSE_BUTTON;
-    MOUSE_WHEEL;
-    AXIS;
-    BUTTON;
-    WINDOW;
-    PLOT;
-}
 
 Event :: struct {
-    event_type: EventType;
+    type: Type;
 }
 str :: (event: *Event) -> string {
-    if event.event_type == {
-        case .MOUSE_POSITION;
-            e := cast(*EventMousePosition)event;
-            return sprint("%", <<e);
-        case .MOUSE_BUTTON;
-            e := cast(*EventMouseButton)event;
-            return sprint("%", <<e);
-        case .MOUSE_WHEEL; 
-            e := cast(*EventMouseWheel)event;
-            return sprint("%", <<e);
-        case .AXIS;
-            e := cast(*EventAxis)event;
-            return sprint("%", <<e);
-        case .BUTTON;
-            e := cast(*EventButton)event;
-            return sprint("%", <<e);
-    }
+    #insert #run specialize(Event_Types, "str");
 }
 
 
@@ -93,22 +76,25 @@ str :: (event: *Event) -> string {
 // ########   #######     ##       ##     #######  ##    ##    ########    ###    ######## ##    ##    ##     ######
 
 
-EventButtonType :: enum u8 {
+Event_ButtonType :: enum u8 {
     PRESSED;
     HOVER;
 }
 
-EventButton :: struct {
+Event_Button :: struct {
     using event: Event;
-    button_event_type: EventButtonType;
+    button_event_type: Event_ButtonType;
     button: *Button;
 }
-event_button :: (button: *Button, type: EventButtonType) -> *EventButton {
-    res := New(EventButton);
-    res.event_type = .BUTTON;
+event_button :: (button: *Button, type: Event_ButtonType) -> *Event_Button {
+    res := New(Event_Button);
+    res.type = Event_Button;
     res.button = button;
     res.button_event_type = type;
     return res;
+}
+str :: (event: *Event_Button) -> string {
+    return sprint("%", <<event);
 }
 
 
@@ -123,15 +109,18 @@ event_button :: (button: *Button, type: EventButtonType) -> *EventButton {
 // ##        ########  #######     ##       ########    ###    ######## ##    ##    ##     ######
 
 
-EventPlot :: struct {
+Event_Plot :: struct {
     using event: Event;
     page: *Page;
 }
-event_plot :: (page: *Page) -> *EventPlot {
-    res := New(EventPlot);
-    res.event_type = .PLOT;
+event_plot :: (page: *Page) -> *Event_Plot {
+    res := New(Event_Plot);
+    res.type = Event_Plot;
     res.page = page;
     return res;
+}
+str :: (event: *Event_Plot) -> string {
+    return sprint("%", <<event);
 }
 
 
@@ -145,22 +134,25 @@ event_plot :: (page: *Page) -> *EventPlot {
 // ##     ##  ##   ##   ##  ##    ##    ##         ## ##   ##       ##   ###    ##    ##    ##
 // ##     ## ##     ## ####  ######     ########    ###    ######## ##    ##    ##     ######
 
-EventAxisType :: enum u8 {
+Event_AxisType :: enum u8 {
     MOVE;
     RECT_ZOOM;
 }
 
-EventAxis :: struct {
+Event_Axis :: struct {
     using event: Event;
-    axis_event_type: EventAxisType;
+    axis_event_type: Event_AxisType;
     axis: *Axis;
 }
-event_axis :: (axis: *Axis, type: EventAxisType) -> *EventAxis {
-    res := New(EventAxis);
-    res.event_type = .AXIS;
+event_axis :: (axis: *Axis, type: Event_AxisType) -> *Event_Axis {
+    res := New(Event_Axis);
+    res.type = Event_Axis;
     res.axis_event_type = type;
     res.axis = axis;
     return res;
+}
+str :: (event: *Event_Axis) -> string {
+    return sprint("%", <<event);
 }
 
 
@@ -172,31 +164,36 @@ event_axis :: (axis: *Axis, type: EventAxisType) -> *EventAxis {
 // ##     ## ##     ## ##     ## ##    ## ##          ##         ## ##   ##       ##   ###    ##    ##    ##
 // ##     ##  #######   #######   ######  ########    ########    ###    ######## ##    ##    ##     ######
 
-EventMousePosition :: struct {
+Event_Mouse_Position :: struct {
     using event: Event;
     position: Vector2;
 }
-event_mouse_position :: (position: Vector2) -> *EventMousePosition {
-    res := New(EventMousePosition);
-    res.event_type = .MOUSE_POSITION;
+event_mouse_position :: (position: Vector2) -> *Event_Mouse_Position {
+    res := New(Event_Mouse_Position);
+    res.type = Event_Mouse_Position;
     res.position = position;
     return res;
+}
+str :: (event: *Event_Mouse_Position) -> string {
+    return sprint("%", <<event);
 }
 
 
 
-
-EventMouseWheel :: struct {
+Event_Mouse_Wheel :: struct {
     using event: Event;
     position: Vector2;
     wheel: float32;
 }
-event_mouse_wheel :: (position: Vector2, wheel: float32) -> *EventMouseWheel {
-    res := New(EventMouseWheel);
-    res.event_type = .MOUSE_WHEEL;
+event_mouse_wheel :: (position: Vector2, wheel: float32) -> *Event_Mouse_Wheel {
+    res := New(Event_Mouse_Wheel);
+    res.type = Event_Mouse_Wheel;
     res.position = position;
     res.wheel = wheel;
     return res;
+}
+str :: (event: *Event_Mouse_Wheel) -> string {
+    return sprint("%", <<event);
 }
 
 
@@ -207,22 +204,25 @@ ButtonEventType :: enum u8 {
     PRESSED;
     RELEASED;
 }
-EventMouseButton :: struct {
+Event_Mouse_Button :: struct {
     using event: Event;
     position: Vector2;
     button: u8;
     button_event_type: ButtonEventType;
 }
-event_mouse_button :: (button: u8, position: Vector2, button_event_type: ButtonEventType) -> *EventMouseButton {
-    res := New(EventMouseButton);
+event_mouse_button :: (button: u8, position: Vector2, button_event_type: ButtonEventType) -> *Event_Mouse_Button {
+    res := New(Event_Mouse_Button);
 
-    res.event_type = .MOUSE_BUTTON;
+    res.type = Event_Mouse_Button;
 
     res.button_event_type = button_event_type;
     res.position = position;
     res.button = button;
 
     return res;
+}
+str :: (event: *Event_Mouse_Button) -> string {
+    return sprint("%", <<event);
 }
 
 

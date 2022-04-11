@@ -33,6 +33,7 @@ simulation :: () {
             w[i] = -1.0  * Math.sin(cast(float32)(t/16.0 * PI) + x[i]/4.0 * cast(float32)PI);
 
             y2[i] = y[i] + 0.6;
+            y_shift[i] =  1.25 * Math.sin(cast(float32)(t/10.0 * PI) + (x[i] + 2.0)/5.0 * cast(float32)PI);
         }
 
 
@@ -65,6 +66,7 @@ x : [N]float32;
 x2 : [N]float32;
 y : [N]float32;
 y2 : [N]float32;
+y_shift : [N]float32;
 z : [N]float32;
 w : [N]float32;
 u : [N]float32;
@@ -84,9 +86,9 @@ main :: () {
     {
         x_mapper := mapper_constraint(mapper_logarithmic(), min_x =  0.1, max_x = 100.0);
         y_mapper := mapper_constraint(mapper_linear()     , min_x = -2.0, max_x =   2.0);
-        add_page(page_single(cartesian_axis_2d(x_mapper, y_mapper, "waves")));
+        add_page(page_single(axis_2d_cartesian(x_mapper, y_mapper, "waves")));
 
-        plot2d(bars(x,w,Color.{ 211, 176, 131, 125 }));
+        plot2d(bars(x,w,transparency(BEIGE, 0.5)));
         plot2d(multi(
             line(x,y,RAYWHITE, 6.0), 
             line(x,y,BLUE)
@@ -101,12 +103,18 @@ main :: () {
     {
         x_mapper := mapper_constraint(mapper_linear(), min_x =  0.0, max_x = 100.0);
         y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x =   2.0);
-        add_page(page_single(cartesian_axis_2d(x_mapper, y_mapper, "fills")));
+        add_page(page_single(axis_2d_cartesian(x_mapper, y_mapper, "fills")));
 
         plot2d(multi(
-            fill(.X,x,y,color=SKYBLUE), 
-            symbols(x,y,color=BLUE),
-            symbols(x,y,size=2.0,color=RAYWHITE)
+            fill(x,y,y2,color=SKYBLUE), 
+            symbols(x,y2,color=BLUE),
+            symbols(x,y2,size=2.0,color=RAYWHITE)
+        ));
+
+        plot2d(multi(
+            fill(x,y,y_shift,color=transparency(BEIGE, 0.5)), 
+            symbols(x,y_shift,color=BROWN),
+            symbols(x,y_shift,size=2.0,color=RAYWHITE)
         ));
     }
 
@@ -114,7 +122,7 @@ main :: () {
         x_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
         y_mapper := mapper_constraint(mapper_linear(), min_x = -2.0, max_x = 2.0);
         add_page(page_single(
-            cartesian_axis_2d(x_mapper, y_mapper, x_label="x axis", y_label="y axis"), 
+            axis_2d_cartesian(x_mapper, y_mapper, x_label="x axis", y_label="y axis"), 
             "circle"
         ));
 
@@ -128,7 +136,7 @@ main :: () {
 
 
     {
-        add_page(page_single(cartesian_axis_2d(title="bars and boxes"), "bars"));
+        add_page(page_single(axis_2d_cartesian(title="bars and boxes"), "bars"));
 
         plot2d(multi(
             bars(ccx, ccy, ORANGE),
@@ -141,6 +149,17 @@ main :: () {
             symbols(ccy, ccx, size=2.0, color=RAYWHITE)
         ));
         plot2d(boxes(x, y, x2, y2, SKYBLUE));
+    }
+
+    {
+        add_page(page_single(axis_2d_cartesian(title="error bars"), "errors"));
+
+        plot2d(multi(
+            line(x, y),
+            error_bars(x, y, y2),
+            symbols(x, y),
+            symbols(x, y, size=2.0, color=RAYWHITE)
+        ));
     }
 
 
