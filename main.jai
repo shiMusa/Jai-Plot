@@ -34,6 +34,8 @@ simulation :: () {
 
             y2[i] = y[i] + 0.6;
             y_shift[i] =  1.25 * Math.sin(cast(float32)(t/10.0 * PI) + (x[i] + 2.0)/5.0 * cast(float32)PI);
+            y_err_pos[i] = y[i] + 0.2 * Math.abs(z[i]);
+            y_err_neg[i] = y[i] - 0.2 * Math.abs(w[i]);
         }
 
 
@@ -67,6 +69,8 @@ x2 : [N]float32;
 y : [N]float32;
 y2 : [N]float32;
 y_shift : [N]float32;
+y_err_pos : [N]float32;
+y_err_neg : [N]float32;
 z : [N]float32;
 w : [N]float32;
 u : [N]float32;
@@ -155,8 +159,8 @@ main :: () {
         add_page(page_single(axis_2d_cartesian(title="error bars"), "errors"));
 
         plot2d(multi(
-            line(x, y),
-            error_bars(x, y, y2),
+            line(x, y, color=BLACK),
+            error_bars(x, y_err_neg, y_err_pos, thickness=2.0),
             symbols(x, y),
             symbols(x, y, size=2.0, color=RAYWHITE)
         ));

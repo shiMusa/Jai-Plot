@@ -346,12 +346,13 @@ Graph_2D_Error_Y :: struct {
     x: []float32;
     low: []float32;
     high: []float32;
+    y_error : bool;
     color: Color;
     thickness: float32;
     size: float32;
 }
 #scope_export
-error_bars :: (x: []float32, low: []float32, high: []float32, thickness: float32 = 1.0, size: float32 = 10.0, color := RED) -> *Graph_2D_Error_Y {
+error_bars :: (x: []float32, low: []float32, high: []float32, y_error := true, thickness: float32 = 1.0, size: float32 = 10.0, color := RED) -> *Graph_2D_Error_Y {
     assert(x.count ==  low.count);
     assert(x.count == high.count);
     res := New(Graph_2D_Error_Y);
@@ -359,6 +360,7 @@ error_bars :: (x: []float32, low: []float32, high: []float32, thickness: float32
     res.x = x;
     res.low = low;
     res.high = high;
+    res.y_error = y_error;
     res.thickness = thickness;
     res.color = color;
     res.size = size;
@@ -367,8 +369,14 @@ error_bars :: (x: []float32, low: []float32, high: []float32, thickness: float32
 #scope_module
 draw :: (using graph: *Graph_2D_Error_Y, x_mapper: *Mapper, y_mapper: *Mapper) {
     mx := map(x_mapper, x);
-    mlow := map(y_mapper, low);
-    mhigh := map(y_mapper, high);
+    mlow, mhigh : []float32;
+    if y_error {
+        mlow  := map(y_mapper, low);
+        mhigh := map(y_mapper, high);
+    } else {
+        mlow  := map(x_mapper, low);
+        mhigh := map(x_mapper, high);
+    }
     defer {
         array_free(mx);
         array_free(mlow);
@@ -376,10 +384,18 @@ draw :: (using graph: *Graph_2D_Error_Y, x_mapper: *Mapper, y_mapper: *Mapper) {
     }
     zero := vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
 
-    for i: 0..x.count-1 {
-        DrawLineEx(vec2(mx[i], mhigh[i]), vec2(mx[i], mlow[i]), thickness, color);
-        DrawLineEx(vec2(mx[i]-0.5*size, mhigh[i]), vec2(mx[i]+0.5*size, mhigh[i]), thickness, color);
-        DrawLineEx(vec2(mx[i]-0.5*size,  mlow[i]), vec2(mx[i]+0.5*size,  mlow[i]), thickness, color);
+    if y_error {
+        for i: 0..x.count-1 {
+            DrawLineEx(vec2(mx[i], mhigh[i]), vec2(mx[i], mlow[i]), thickness, color);
+            DrawLineEx(vec2(mx[i]-0.5*size, mhigh[i]), vec2(mx[i]+0.5*size, mhigh[i]), thickness, color);
+            DrawLineEx(vec2(mx[i]-0.5*size,  mlow[i]), vec2(mx[i]+0.5*size,  mlow[i]), thickness, color);
+        }
+    } else {
+        for i: 0..x.count-1 {
+            DrawLineEx(vec2(mx[i], mhigh[i]), vec2(mx[i], mlow[i]), thickness, color);
+            DrawLineEx(vec2(mx[i]-0.5*size, mhigh[i]), vec2(mx[i]+0.5*size, mhigh[i]), thickness, color);
+            DrawLineEx(vec2(mx[i]-0.5*size,  mlow[i]), vec2(mx[i]+0.5*size,  mlow[i]), thickness, color);
+        }
     }
 }
 bounds_x :: inline (using graph: *Graph_2D_Error_Y) -> float32, float32 {
