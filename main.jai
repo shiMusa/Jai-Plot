@@ -36,6 +36,8 @@ simulation :: () {
             y_shift[i] =  1.25 * Math.sin(cast(float32)(t/10.0 * PI) + (x[i] + 2.0)/5.0 * cast(float32)PI);
             y_err_pos[i] = y[i] + 0.2 * Math.abs(z[i]);
             y_err_neg[i] = y[i] - 0.2 * Math.abs(w[i]);
+            x_err_pos[i] = x[i] + 0.2 * Math.abs(y[i]);
+            x_err_neg[i] = x[i] - 0.2 * Math.abs(y_shift[i]);
         }
 
 
@@ -71,6 +73,8 @@ y2 : [N]float32;
 y_shift : [N]float32;
 y_err_pos : [N]float32;
 y_err_neg : [N]float32;
+x_err_pos : [N]float32;
+x_err_neg : [N]float32;
 z : [N]float32;
 w : [N]float32;
 u : [N]float32;
@@ -85,7 +89,7 @@ ccy : [17]float32;
 
 main :: () {
 
-    plot(highdpi=true, callback= ()=>{ stop_simulation = true; } );
+    plot(highdpi=false, callback= ()=>{ stop_simulation = true; } );
 
     {
         x_mapper := mapper_constraint(mapper_logarithmic(), min_x =  0.1, max_x = 100.0);
@@ -156,11 +160,16 @@ main :: () {
     }
 
     {
-        add_page(page_single(axis_2d_cartesian(title="error bars"), "errors"));
+        add_page(page_single(axis_2d_cartesian(
+            mapper_constraint(mapper_linear(), min_x=-1.0, max_x=10.0),
+            mapper_constraint(mapper_linear(), min_x=-3.0, max_x=3.0),
+            title="error bars"
+        ), "errors"));
 
         plot2d(multi(
             line(x, y, color=BLACK),
             error_bars(x, y_err_neg, y_err_pos, thickness=2.0),
+            error_bars(y, x_err_neg, x_err_pos, y_error=false, thickness=2.0, color=BLUE),
             symbols(x, y),
             symbols(x, y, size=2.0, color=RAYWHITE)
         ));
