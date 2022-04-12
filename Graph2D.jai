@@ -567,6 +567,30 @@ GRADIENT_GREYSCALE      :: Gradient.{float32.[0.0,1.0]    , Color.[BLACK, RAYWHI
 GRADIENT_BLUE_GREYSCALE :: Gradient.{float32.[0.0,0.5,1.0], Color.[BLACK, Color.{110,125,140,255}, RAYWHITE], .LINEAR};
 GRADIENT_BLUE_RED       :: Gradient.{float32.[0.0,0.5,1.0], Color.[BLUE, RAYWHITE, RED]                     , .LINEAR};
 
+
+gradient_greyscale :: (min: float32, max: float32, interpolation := GradientInterpolation.LINEAR) -> Gradient {
+    res := GRADIENT_GREYSCALE;
+    res.values[0] = min;
+    res.values[1] = 0.5*(min+max);
+    res.values[2] = max;
+    return res;
+}
+gradient_blue_greyscale :: (min: float32, max: float32, interpolation := GradientInterpolation.LINEAR) -> Gradient {
+    res := GRADIENT_BLUE_GREYSCALE;
+    res.values[0] = min;
+    res.values[1] = 0.5*(min+max);
+    res.values[2] = max;
+    return res;
+}
+gradient_blue_red :: (min: float32, max: float32, interpolation := GradientInterpolation.LINEAR) -> Gradient {
+    res := GRADIENT_BLUE_RED;
+    res.values[0] = min;
+    res.values[1] = 0.5*(min+max);
+    res.values[2] = max;
+    return res;
+}
+
+
 gradient :: (values: []float32, colors: []Color, interpolation := GradientInterpolation.LINEAR) -> Gradient {
     assert(values.count == colors.count);
     for i: 0..values.count-2 {
