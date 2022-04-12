@@ -56,6 +56,13 @@ simulation :: () {
             ccy[i] += cast(float32)( 4.0 * Math.cos(t/5.0 * PI) );
         }
 
+        for x:0..32-1 {
+            for y:0..32-1 {
+                vx := 1.0/32.0*x * PI;
+                vy := 1.0/32.0*y * PI;
+                // heat[x + 32*y] = 
+            }
+        }
 
         sleep_milliseconds(10);
     }
@@ -86,6 +93,8 @@ cx : [361]float32;
 cy : [361]float32;
 ccx : [17]float32;
 ccy : [17]float32;
+
+heat : [32*32]float32;
 
 main :: () {
 
@@ -173,6 +182,18 @@ main :: () {
             symbols(x, y),
             symbols(x, y, size=2.0, color=RAYWHITE)
         ));
+    }
+
+    {
+        add_page(page_single(axis_2d_cartesian(
+            mapper_constraint(mapper_linear(), min_x=0.0, max_x=1.0),
+            mapper_constraint(mapper_linear(), min_x=0.0, max_x=1.0),
+            title="heatmap"
+        ), "heatmap"));
+
+        grad := New(Gradient, false);
+        <<grad = GRADIENT_BLUE_GREYSCALE;
+        plot2d(heatmap(rectangle(0,0,1,1), 32, 32, heat, grad));
     }
 
 

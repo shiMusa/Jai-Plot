@@ -40,6 +40,9 @@ intersection_axis :: (b: *Axis, pos: Vector2) -> bool {
 draw :: (b: *Axis) {
     #insert #run specialize(Axis_Types, "draw");
 }
+update :: (b: *Axis) {
+    #insert #run specialize(Axis_Types, "update");
+}
 reset :: (b: *Axis) {
     #insert #run specialize(Axis_Types, "reset");
 }
@@ -327,6 +330,11 @@ on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
             if e.wheel != 0.0 && CheckCollisionPointRec(e.position, ax.inner_rect) {
                 zoom(ax, e.position, e.wheel);
             }
+    }
+}
+update :: (using ax: *Axis_2D_Cartesian) {
+    for graphs2d {
+        update(it, x_mapper, y_mapper);
     }
 }
 draw :: (using ax: *Axis_2D_Cartesian) {

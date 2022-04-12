@@ -16,7 +16,8 @@ Graph_2D_Types :: Type.[
     Graph_2D_Fill,
     Graph_2D_Boxes,
     Graph_2D_Multi,
-    Graph_2D_Error
+    Graph_2D_Error,
+    Graph_2D_HeatMap
 ];
 
 Graph_2D :: struct {
@@ -25,6 +26,9 @@ Graph_2D :: struct {
 
 draw :: (b: *Graph_2D, x_mapper: *Mapper, y_mapper: *Mapper) {
     #insert #run specialize(Graph_2D_Types, "draw", .["x_mapper", "y_mapper"]);
+}
+update :: (b: *Graph_2D, x_mapper: *Mapper, y_mapper: *Mapper) {
+    #insert #run specialize(Graph_2D_Types, "update", .["x_mapper", "y_mapper"]);
 }
 bounds_x :: (b: *Graph_2D) -> float32, float32 {
     #insert #run specialize(Graph_2D_Types, "bounds_x", num_return_vars=2);
@@ -70,6 +74,7 @@ draw :: (using graph: *Graph_2D_Line, x_mapper: *Mapper, y_mapper: *Mapper) {
     }
     DrawLines(mx, my, color, thickness);
 }
+update :: inline (using graph: *Graph_2D_Line, x_mapper: *Mapper, y_mapper: *Mapper) {}
 bounds_x :: inline (using graph: *Graph_2D_Line) -> float32, float32 {
     return min(x), max(x);
 }
@@ -161,6 +166,7 @@ draw :: (using graph: *Graph_2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
 
     DrawTriangleStrip(pts, color);
 }
+update :: inline (using graph: *Graph_2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {}
 bounds_x :: inline (using graph: *Graph_2D_Fill) -> float32, float32 {
     return min(x), max(x);
 }
@@ -191,27 +197,8 @@ Symbols :: enum u8 {
 }
 #scope_module
 symbol_render_textures : [4]RenderTexture2D;
-init_symbol_texture :: () {
-    for *symbol_render_textures {
-        <<it = render_to_texture(SYMBOL_SIZE, SYMBOL_SIZE, #code {
-            ClearBackground(Color.{255,255,255,0});
-            if cast(Symbols)it_index == {
-                case .CIRCLE;
-                    DrawCircleV(0.5*vec2(SYMBOL_SIZE+0.5, SYMBOL_SIZE+0.5), SYMBOL_SIZE/2, WHITE);
-                case .SQUARE;
-                    DrawRectangle(0, 0, SYMBOL_SIZE, SYMBOL_SIZE, WHITE);
-                case .PLUS;
-                    half_linewidth := SYMBOL_SIZE * 1.0 / 5.0 * 0.5;
-                    mid := 0.5 * SYMBOL_SIZE;
-                    DrawRectangleV(vec2(mid-half_linewidth, 0), vec2(2.0*half_linewidth, SYMBOL_SIZE), WHITE);
-                    DrawRectangleV(vec2(0, mid-half_linewidth), vec2(SYMBOL_SIZE, 2.0*half_linewidth), WHITE);
-                case .X;
-                    DrawLineEx(vec2(), SYMBOL_SIZE*vec2(1.0,1.0), 0.3*SYMBOL_SIZE, WHITE);
-                    DrawLineEx(SYMBOL_SIZE*vec2(0.0,1.0), SYMBOL_SIZE*vec2(1.0,0.0), 0.3*SYMBOL_SIZE, WHITE);
-            }
-        });
-    }
-}
+symbols_initialized := false;
+
 Graph_2D_Symbols :: struct {
     using _s : Graph_2D;
     x: []float32;
@@ -244,6 +231,30 @@ draw :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper, y_mapper: *Mapper) {
     for i: 0..x.count-1 {
         DrawTextureEx(tex, vec2(mx[i],my[i]) - vec2(size,size), 0.0, size/(0.5*SYMBOL_SIZE), color);
     }
+}
+update :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper, y_mapper: *Mapper) {
+    if symbols_initialized then return;
+
+    for *symbol_render_textures {
+        <<it = render_to_texture(SYMBOL_SIZE, SYMBOL_SIZE, #code {
+            ClearBackground(Color.{255,255,255,0});
+            if cast(Symbols)it_index == {
+                case .CIRCLE;
+                    DrawCircleV(0.5*vec2(SYMBOL_SIZE+0.5, SYMBOL_SIZE+0.5), SYMBOL_SIZE/2, WHITE);
+                case .SQUARE;
+                    DrawRectangle(0, 0, SYMBOL_SIZE, SYMBOL_SIZE, WHITE);
+                case .PLUS;
+                    half_linewidth := SYMBOL_SIZE * 1.0 / 5.0 * 0.5;
+                    mid := 0.5 * SYMBOL_SIZE;
+                    DrawRectangleV(vec2(mid-half_linewidth, 0), vec2(2.0*half_linewidth, SYMBOL_SIZE), WHITE);
+                    DrawRectangleV(vec2(0, mid-half_linewidth), vec2(SYMBOL_SIZE, 2.0*half_linewidth), WHITE);
+                case .X;
+                    DrawLineEx(vec2(), SYMBOL_SIZE*vec2(1.0,1.0), 0.3*SYMBOL_SIZE, WHITE);
+                    DrawLineEx(SYMBOL_SIZE*vec2(0.0,1.0), SYMBOL_SIZE*vec2(1.0,0.0), 0.3*SYMBOL_SIZE, WHITE);
+            }
+        });
+    }
+    symbols_initialized = true;
 }
 bounds_x :: inline (using graph: *Graph_2D_Symbols) -> float32, float32 {
     return min(x), max(x);
@@ -323,6 +334,7 @@ draw :: (using graph: *Graph_2D_Bars, x_mapper: *Mapper, y_mapper: *Mapper) {
             }
     }
 }
+update :: inline (using graph: *Graph_2D_Bars, x_mapper: *Mapper, y_mapper: *Mapper) {}
 bounds_x :: inline (using graph: *Graph_2D_Bars) -> float32, float32 {
     return min(x), max(x);
 }
@@ -398,6 +410,7 @@ draw :: (using graph: *Graph_2D_Error, x_mapper: *Mapper, y_mapper: *Mapper) {
         }
     }
 }
+update :: inline (using graph: *Graph_2D_Error, x_mapper: *Mapper, y_mapper: *Mapper) {}
 bounds_x :: inline (using graph: *Graph_2D_Error) -> float32, float32 {
     if y_error {
         return min(val), max(val);
@@ -517,6 +530,7 @@ draw :: (using graph: *Graph_2D_Boxes, x_mapper: *Mapper, y_mapper: *Mapper) {
         }
     }
 }
+update :: inline (using graph: *Graph_2D_Boxes, x_mapper: *Mapper, y_mapper: *Mapper) {}
 bounds_x :: inline (using graph: *Graph_2D_Boxes) -> float32, float32 {
     if x2.count == 0 then return min(x1), max(x1);
     return min(min(x1),min(x2)), max(max(x1),max(x2));
@@ -527,6 +541,121 @@ bounds_y :: inline (using graph: *Graph_2D_Boxes) -> float32, float32 {
 }
 
 
+
+
+// ##     ## ########    ###    ########
+// ##     ## ##         ## ##      ##
+// ##     ## ##        ##   ##     ##
+// ######### ######   ##     ##    ##
+// ##     ## ##       #########    ##
+// ##     ## ##       ##     ##    ##
+// ##     ## ######## ##     ##    ##
+
+#scope_export
+Gradient :: struct {
+    values : []float32;
+    colors : []Color;
+    interp: GradientInterpolation;
+}
+
+
+GradientInterpolation :: enum u8 {
+    LINEAR;
+}
+
+GRADIENT_GREYSCALE      :: Gradient.{float32.[0.0,1.0]    , Color.[BLACK, RAYWHITE]                         , .LINEAR};
+GRADIENT_BLUE_GREYSCALE :: Gradient.{float32.[0.0,0.5,1.0], Color.[BLACK, Color.{120,120,130,255}, RAYWHITE], .LINEAR};
+GRADIENT_BLUE_RED       :: Gradient.{float32.[0.0,0.5,1.0], Color.[BLUE, RAYWHITE, RED]                     , .LINEAR};
+
+gradient :: (values: []float32, colors: []Color, interpolation := GradientInterpolation.LINEAR) -> *Gradient {
+    assert(values.count == colors.count);
+    for i: 0..values.count-2 {
+        assert(values[i] < values[i+1]);
+    }
+
+    res := New(Gradient, false);
+    res.values = values;
+    res.colors = colors;
+    res.interp = interpolation;
+    return res;
+}
+#scope_module
+value_to_color :: (using gradient: *Gradient, value: float32) -> Color {
+    N := values.count;
+    if #complete interp == {
+        case .LINEAR;
+            if value <= values[0]   then return colors[0]  ;
+            if value >= values[N-1] then return colors[N-1];
+            for i: 1..N-1 {
+                if value >= values[i] then continue;
+                // here, values[i-1] < value < values[i]
+                t := (value-values[i-1])/(values[i]-values[i-1]);
+                return (1-t) * colors[i-1] + t * colors[i]; // linear rgb interpolation
+            }
+    }
+}
+
+
+
+Graph_2D_HeatMap :: struct {
+    using _g: Graph_2D;
+    rect: Rectangle;
+    width: int;
+    height: int;
+    values: []float32;
+    gradient: *Gradient;
+    texture: RenderTexture2D;
+    texture_initialized := false;
+}
+#scope_export
+heatmap :: (rect: Rectangle, width: int, height: int, values: []float32, gradient: *Gradient) -> *Graph_2D_HeatMap {
+    assert(values.count == width*height);
+    res := New(Graph_2D_HeatMap);
+    res.type = Graph_2D_HeatMap;
+    res.width = width;
+    res.height = height;
+    res.values = values;
+    res.gradient = gradient;
+    return res;
+}
+#scope_module
+draw :: (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper, y_mapper: *Mapper) {
+    if values.count != width*height {
+        DrawRectangleRec(rect, PURPLE);
+    }
+
+    x0 := map(x_mapper, rect.x);
+    x1 := map(x_mapper, rect.x+rect.width);
+    y0 := map(y_mapper, rect.y);
+    y1 := map(y_mapper, rect.y+rect.height);
+
+    DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(x0,y0,x1-x0,y1-y0), vec2(), 0.0, WHITE);
+}
+update :: inline (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper, y_mapper: *Mapper) {
+    if !texture_initialized {
+        texture = LoadRenderTexture(cast(s32)width, cast(s32)height);
+        texture_initialized = true;
+    }
+
+    TextureMode(texture, #code {
+        if values.count != width*height {
+            ClearBackground(PURPLE);
+        } else {
+            ClearBackground(RAYWHITE);
+            for x: 0..width-1 {
+                for y: 0..height-1 {
+                    DrawPixel(cast(s32)x, cast(s32)y, value_to_color(gradient, values[x + width*y]));
+                }
+            }
+        }
+    });
+}
+bounds_x :: inline (using graph: *Graph_2D_HeatMap) -> float32, float32 {
+    return rect.x, rect.x+rect.width;
+}
+bounds_y :: inline (using graph: *Graph_2D_HeatMap) -> float32, float32 {
+    return rect.y, rect.y+rect.height;
+}
 
 
 
@@ -560,6 +689,11 @@ multi :: (graphs2d: ..*Graph_2D) -> *Graph_2D_Multi {
 draw :: (using graph: *Graph_2D_Multi, x_mapper: *Mapper, y_mapper: *Mapper) {
     for graphs2d {
         draw(it, x_mapper, y_mapper);
+    }
+}
+update :: inline (using graph: *Graph_2D_Multi, x_mapper: *Mapper, y_mapper: *Mapper) {
+    for graphs2d {
+        update(it, x_mapper, y_mapper);
     }
 }
 bounds_x :: (using graph: *Graph_2D_Multi) -> float32, float32 {

@@ -114,6 +114,11 @@ draw_plot :: () {
     }
 }
 
+update_plot :: () {
+    if !_plot.active_page then return;
+    update(_plot.active_page);
+}
+
 
 
 
@@ -158,7 +163,6 @@ plot_render :: () {
     Window(cast(s32)WINDOW_RECT.width, cast(s32)WINDOW_RECT.height, "Jai Plot");
     SetTargetFPS(60);
 
-    init_symbol_texture();
     camera := camera2d();
     _mouse = cast(*MouseState)mouse_free();
 
@@ -170,6 +174,8 @@ plot_render :: () {
         WINDOW_RECT.height = cast(float)GetScreenHeight();
 
         // print("---------------------------------------------------\n");
+        update_plot();
+
         read_frame_events();
 
         Drawing();
