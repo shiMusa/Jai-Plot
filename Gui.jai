@@ -186,7 +186,7 @@ draw :: (using button_framed: *Button_Tab) {
         DrawRectangleRec(rect, fc);
     } else {
         r := rect;
-        r.height += 10;
+        r.height += 2;
         DrawRectangleRec(r, fc);
     }
     

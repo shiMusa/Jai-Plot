@@ -5,7 +5,7 @@ GREY       :: GRAY;
 DARKGREY   :: DARKGRAY;
 TRANSPARENT :: Color.{255,255,255,0};
 
-
+PI32 :: cast(float32)PI;
 
 render_to_texture :: (width: s32, height: s32, $render_code: Code) -> RenderTexture2D #expand {
     tex := LoadRenderTexture(width, height);

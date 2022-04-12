@@ -34,6 +34,10 @@ simulation :: () {
 
             y2[i] = y[i] + 0.6;
             y_shift[i] =  1.25 * Math.sin(cast(float32)(t/10.0 * PI) + (x[i] + 2.0)/5.0 * cast(float32)PI);
+            y_err_pos[i] = y[i] + 0.2 * Math.abs(z[i]);
+            y_err_neg[i] = y[i] - 0.2 * Math.abs(w[i]);
+            x_err_pos[i] = x[i] + 0.2 * Math.abs(y[i]);
+            x_err_neg[i] = x[i] - 0.2 * Math.abs(y_shift[i]);
         }
 
 
@@ -52,6 +56,13 @@ simulation :: () {
             ccy[i] += cast(float32)( 4.0 * Math.cos(t/5.0 * PI) );
         }
 
+        for x:0..H-1 {
+            for y:0..H-1 {
+                vx := 1.0/H*x * 2.0 * PI + t/10.0 * 2.0 * PI;
+                vy := 1.0/H*y * 2.0 * PI + t/7.0 * 2.0 * PI;
+                heat[x + H*y] = cast(float32)Math.abs( Math.sin(vx) * Math.sin(vy) );
+            }
+        }
 
         sleep_milliseconds(10);
     }
@@ -67,6 +78,10 @@ x2 : [N]float32;
 y : [N]float32;
 y2 : [N]float32;
 y_shift : [N]float32;
+y_err_pos : [N]float32;
+y_err_neg : [N]float32;
+x_err_pos : [N]float32;
+x_err_neg : [N]float32;
 z : [N]float32;
 w : [N]float32;
 u : [N]float32;
@@ -78,6 +93,9 @@ cx : [361]float32;
 cy : [361]float32;
 ccx : [17]float32;
 ccy : [17]float32;
+
+H :: 64;
+heat : [H*H]float32;
 
 main :: () {
 
@@ -152,14 +170,29 @@ main :: () {
     }
 
     {
-        add_page(page_single(axis_2d_cartesian(title="error bars"), "errors"));
+        add_page(page_single(axis_2d_cartesian(
+            mapper_constraint(mapper_linear(), min_x=-1.0, max_x=10.0),
+            mapper_constraint(mapper_linear(), min_x=-3.0, max_x=3.0),
+            title="error bars"
+        ), "errors"));
 
         plot2d(multi(
-            line(x, y),
-            error_bars(x, y, y2),
+            line(x, y, color=BLACK),
+            error_bars(x, y_err_neg, y_err_pos, thickness=2.0),
+            error_bars(y, x_err_neg, x_err_pos, y_error=false, thickness=2.0, color=BLUE),
             symbols(x, y),
             symbols(x, y, size=2.0, color=RAYWHITE)
         ));
+    }
+
+    {
+        add_page(page_single(axis_2d_cartesian(
+            mapper_constraint(mapper_linear(), min_x=0.0, max_x=1.0),
+            mapper_constraint(mapper_linear(), min_x=0.0, max_x=1.0),
+            title="heatmap"
+        ), "heatmap"));
+
+        plot2d(heatmap(rectangle(0,0,1,1), H, H, heat, GRADIENT_BLUE_RED));
     }
 
 

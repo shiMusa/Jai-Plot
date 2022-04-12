@@ -40,6 +40,9 @@ intersection_axis :: (b: *Axis, pos: Vector2) -> bool {
 draw :: (b: *Axis) {
     #insert #run specialize(Axis_Types, "draw");
 }
+update :: (b: *Axis) {
+    #insert #run specialize(Axis_Types, "update");
+}
 reset :: (b: *Axis) {
     #insert #run specialize(Axis_Types, "reset");
 }
@@ -125,6 +128,7 @@ Axis_2D_Cartesian :: struct {
     button_reset        : *Button;
     button_equal_scaling: *Button;
     button_fit          : *Button;
+    button_grid         : *Button;
 
     title  : string;
     title_padding: float32;
@@ -165,6 +169,8 @@ axis_2d_cartesian :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null, title:
     res.button_reset         = button_framed(Rectangle.{}, "reset", res.font_size);
     res.button_equal_scaling = button_framed(Rectangle.{}, "1:1"  , res.font_size);
     res.button_fit           = button_framed(Rectangle.{}, "fit"  , res.font_size);
+    res.button_grid          = button_framed(Rectangle.{}, "#"    , res.font_size);
+
     
     res.x_mapper = ifx x_mapper then x_mapper else mapper_linear();
     res.y_mapper = ifx y_mapper then y_mapper else mapper_linear();
@@ -298,15 +304,11 @@ on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
             e := cast(*Event_Button)event;
             if e.button_event_type != .PRESSED then return;
 
-            if e.button == ax.button_reset {
-                reset(ax);
-            }
-            if e.button == ax.button_equal_scaling {
-                equal_scaling(ax);
-            }
-            if e.button == ax.button_fit {
-                fit_data(ax, true);
-            }
+            if e.button == ax.button_reset         then reset(ax);
+            if e.button == ax.button_equal_scaling then equal_scaling(ax);
+            if e.button == ax.button_fit           then fit_data(ax, true);
+            if e.button == ax.button_grid          then ax.show_grid = !ax.show_grid;
+
         case Event_Mouse_Button;
             e := cast(*Event_Mouse_Button)event;
 
@@ -329,6 +331,11 @@ on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
             }
     }
 }
+update :: (using ax: *Axis_2D_Cartesian) {
+    for graphs2d {
+        update(it, x_mapper, y_mapper);
+    }
+}
 draw :: (using ax: *Axis_2D_Cartesian) {
     fit_data(ax);
     // map(ax);
@@ -341,8 +348,8 @@ draw :: (using ax: *Axis_2D_Cartesian) {
     defer array_free(xticks);
     defer array_free(yticks);
 
-    draw_gridlines :: ($x_axis: bool, exponent_shift: float32, color: Color, thickness: float = 1.0) #expand {
-        #if x_axis {
+    calculate_ticks :: (exponent_shift: float32) #expand {
+        { // x
             mi := map_inv(x_mapper, inner_rect.x                   );
             ma := map_inv(x_mapper, inner_rect.x + inner_rect.width);
             if mi == ma then return;
@@ -354,7 +361,8 @@ draw :: (using ax: *Axis_2D_Cartesian) {
                 case Mapper_Logarithmic;
                     xticks = ticks_logarithmic(mi, ma, 10.0);
             }
-        } else {
+        }
+        { // y
             mi := map_inv(y_mapper, inner_rect.y                    );
             ma := map_inv(y_mapper, inner_rect.y + inner_rect.height);
             if mi == ma then return;
@@ -367,7 +375,9 @@ draw :: (using ax: *Axis_2D_Cartesian) {
                     yticks = ticks_logarithmic(mi, ma, 10.0);
             }
         }
+    }
 
+    draw_gridlines :: ($x_axis: bool, exponent_shift: float32, color: Color, thickness: float = 1.0) #expand {
         #if x_axis {
             ticks := xticks;
         } else {
@@ -400,6 +410,8 @@ draw :: (using ax: *Axis_2D_Cartesian) {
         draw(it, x_mapper, y_mapper);
     }
     if hide_overflow then EndScissorMode();
+
+    calculate_ticks(0.0);
 
     if show_grid {
         draw_gridlines(true , 0.0, Color.{ 130, 130, 130, 125 }, 1.5);
@@ -560,11 +572,16 @@ draw :: (using ax: *Axis_2D_Cartesian) {
             button_equal_scaling.rect = r;
             r.x += button_height + button_width;
             button_fit.rect = r;
+
+            br := bottom_right(inner_rect);
+            r = rectangle(br.x - 2*button_height, br.y - 2*button_height, button_height, button_height);
+            button_grid.rect = r;
         }
 
         draw(button_reset);
         draw(button_equal_scaling);
         draw(button_fit);
+        draw(button_grid);
     }
 }
 

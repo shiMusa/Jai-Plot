@@ -26,6 +26,9 @@ activate :: (page: *Page) {
 draw :: (b: *Page) {
     #insert #run specialize(Page_Types, "draw");
 }
+update :: (b: *Page) {
+    #insert #run specialize(Page_Types, "update");
+}
 intersection_axis :: (b: *Page, pos: Vector2) -> *Axis {
     #insert #run specialize(Page_Types, "intersection_axis", .["pos"], 1);
 }
@@ -69,6 +72,9 @@ page_single_on_event :: (page: *Page_Single, event: *Event) {
 draw :: (page: *Page_Single) {
     fit_into_rectangle(page.axis, page.page_rectangle);
     draw(page.axis);
+}
+update :: (page: *Page_Single) {
+    update(page.axis);
 }
 intersection_axis :: inline (using page: *Page_Single, pos: Vector2) -> *Axis {
     return ifx intersection_axis(axis, pos) then axis else null;
