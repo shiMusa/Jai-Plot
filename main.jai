@@ -56,11 +56,11 @@ simulation :: () {
             ccy[i] += cast(float32)( 4.0 * Math.cos(t/5.0 * PI) );
         }
 
-        for x:0..32-1 {
-            for y:0..32-1 {
-                vx := 1.0/32.0*x * PI;
-                vy := 1.0/32.0*y * PI;
-                // heat[x + 32*y] = 
+        for x:0..H-1 {
+            for y:0..H-1 {
+                vx := 1.0/H*x * 2.0 * PI + t/10.0 * 2.0 * PI;
+                vy := 1.0/H*y * 2.0 * PI + t/7.0 * 2.0 * PI;
+                heat[x + H*y] = cast(float32)Math.abs( Math.sin(vx) * Math.sin(vy) );
             }
         }
 
@@ -94,7 +94,8 @@ cy : [361]float32;
 ccx : [17]float32;
 ccy : [17]float32;
 
-heat : [32*32]float32;
+H :: 64;
+heat : [H*H]float32;
 
 main :: () {
 
@@ -191,9 +192,7 @@ main :: () {
             title="heatmap"
         ), "heatmap"));
 
-        grad := New(Gradient, false);
-        <<grad = GRADIENT_BLUE_GREYSCALE;
-        plot2d(heatmap(rectangle(0,0,1,1), 32, 32, heat, grad));
+        plot2d(heatmap(rectangle(0,0,1,1), H, H, heat, GRADIENT_BLUE_RED));
     }
 
 

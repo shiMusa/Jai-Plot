@@ -564,23 +564,23 @@ GradientInterpolation :: enum u8 {
 }
 
 GRADIENT_GREYSCALE      :: Gradient.{float32.[0.0,1.0]    , Color.[BLACK, RAYWHITE]                         , .LINEAR};
-GRADIENT_BLUE_GREYSCALE :: Gradient.{float32.[0.0,0.5,1.0], Color.[BLACK, Color.{120,120,130,255}, RAYWHITE], .LINEAR};
+GRADIENT_BLUE_GREYSCALE :: Gradient.{float32.[0.0,0.5,1.0], Color.[BLACK, Color.{110,125,140,255}, RAYWHITE], .LINEAR};
 GRADIENT_BLUE_RED       :: Gradient.{float32.[0.0,0.5,1.0], Color.[BLUE, RAYWHITE, RED]                     , .LINEAR};
 
-gradient :: (values: []float32, colors: []Color, interpolation := GradientInterpolation.LINEAR) -> *Gradient {
+gradient :: (values: []float32, colors: []Color, interpolation := GradientInterpolation.LINEAR) -> Gradient {
     assert(values.count == colors.count);
     for i: 0..values.count-2 {
         assert(values[i] < values[i+1]);
     }
 
-    res := New(Gradient, false);
+    res : Gradient = ---;
     res.values = values;
     res.colors = colors;
     res.interp = interpolation;
     return res;
 }
 #scope_module
-value_to_color :: (using gradient: *Gradient, value: float32) -> Color {
+value_to_color :: (using gradient: Gradient, value: float32) -> Color {
     N := values.count;
     if #complete interp == {
         case .LINEAR;
@@ -603,15 +603,16 @@ Graph_2D_HeatMap :: struct {
     width: int;
     height: int;
     values: []float32;
-    gradient: *Gradient;
+    gradient: Gradient;
     texture: RenderTexture2D;
     texture_initialized := false;
 }
 #scope_export
-heatmap :: (rect: Rectangle, width: int, height: int, values: []float32, gradient: *Gradient) -> *Graph_2D_HeatMap {
+heatmap :: (rect: Rectangle, width: int, height: int, values: []float32, gradient: Gradient) -> *Graph_2D_HeatMap {
     assert(values.count == width*height);
     res := New(Graph_2D_HeatMap);
     res.type = Graph_2D_HeatMap;
+    res.rect = rect;
     res.width = width;
     res.height = height;
     res.values = values;
@@ -629,7 +630,8 @@ draw :: (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper, y_mapper: *Mapper) {
     y0 := map(y_mapper, rect.y);
     y1 := map(y_mapper, rect.y+rect.height);
 
-    DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(x0,y0,x1-x0,y1-y0), vec2(), 0.0, WHITE);
+    DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(x0,y1,x1-x0,-(y1-y0)), vec2(), 0.0, WHITE);
+    // DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(200,200,width,height), vec2(), 0.0, WHITE);
 }
 update :: inline (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper, y_mapper: *Mapper) {
     if !texture_initialized {
