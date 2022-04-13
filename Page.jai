@@ -29,7 +29,7 @@ draw :: (b: *Page) {
 update :: (b: *Page) {
     #insert #run specialize(Page_Types, "update");
 }
-intersection_axis :: (b: *Page, pos: Vector2) -> *Axis {
+intersection_axis :: (b: *Page, pos: Vector2) -> *Axis_2D {
     #insert #run specialize(Page_Types, "intersection_axis", .["pos"], 1);
 }
 
@@ -44,10 +44,10 @@ intersection_axis :: (b: *Page, pos: Vector2) -> *Axis {
 
 Page_Single :: struct {
     using _page: Page;
-    axis: *Axis;
+    axis: *Axis_2D;
 }
 #scope_export
-page_single :: (axis: *Axis, page_title: string = "", activate_axis: bool = true) -> *Page_Single {
+page_single :: (axis: *Axis_2D, page_title: string = "", activate_axis: bool = true) -> *Page_Single {
     res := New(Page_Single);
     res.type = Page_Single;
     res.page_title = page_title;
@@ -76,6 +76,6 @@ draw :: (page: *Page_Single) {
 update :: (page: *Page_Single) {
     update(page.axis);
 }
-intersection_axis :: inline (using page: *Page_Single, pos: Vector2) -> *Axis {
+intersection_axis :: inline (using page: *Page_Single, pos: Vector2) -> *Axis_2D {
     return ifx intersection_axis(axis, pos) then axis else null;
 }

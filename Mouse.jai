@@ -80,13 +80,13 @@ mouse_dragging :: (using axis: *Axis_2D_Cartesian) -> *MouseState_Dragging {
     res.y = cast(float32)GetMouseY();
     res.axis = axis;
 
-    mx := ifx x_mapper.type == Mapper_Constraint then (cast(*Mapper_Constraint)x_mapper).inner else x_mapper;
-    my := ifx y_mapper.type == Mapper_Constraint then (cast(*Mapper_Constraint)y_mapper).inner else y_mapper;
+    mx := ifx x_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)x_mapper).inner else x_mapper;
+    my := ifx y_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)y_mapper).inner else y_mapper;
     res.old_x = map_inv(mx, cast(float32)res.x);
     res.old_y = map_inv(my, cast(float32)res.y);
 
-    x_mapper = mapper_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
-    y_mapper = mapper_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
+    x_mapper = mapper_1d_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
+    y_mapper = mapper_1d_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
 
     subscribe(_broadcaster, res, on_event);
     
@@ -99,10 +99,10 @@ on_event :: (using mouse: *MouseState_Dragging, event: *Event) {
             e := cast(*Event_Mouse_Position)event;
             x = e.position.x;
             y = e.position.y;
-            mx := cast(*Mapper_Constraint)axis.x_mapper;
-            my := cast(*Mapper_Constraint)axis.y_mapper;
-            fit(mx, old_x, x);
-            fit(my, old_y, y);
+            mx := cast(*Mapper_1D_Constraint)axis.x_mapper;
+            my := cast(*Mapper_1D_Constraint)axis.y_mapper;
+            match(mx, old_x, x);
+            match(my, old_y, y);
         case Event_Mouse_Button;
             e := cast(*Event_Mouse_Button)event;
             if e.button == 0 && e.button_event_type == .RELEASED {

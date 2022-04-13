@@ -24,10 +24,10 @@ Graph_2D :: struct {
     type: Type;
 }
 
-draw :: (b: *Graph_2D, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (b: *Graph_2D, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     #insert #run specialize(Graph_2D_Types, "draw", .["x_mapper", "y_mapper"]);
 }
-update :: (b: *Graph_2D, x_mapper: *Mapper, y_mapper: *Mapper) {
+update :: (b: *Graph_2D, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     #insert #run specialize(Graph_2D_Types, "update", .["x_mapper", "y_mapper"]);
 }
 bounds_x :: (b: *Graph_2D) -> float32, float32 {
@@ -65,7 +65,7 @@ line :: (x: []float32, y: []float32, color: Color = RED, thickness: float32 = 2.
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Line, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Line, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     mx := map(x_mapper, x);
     my := map(y_mapper, y);
     defer {
@@ -74,7 +74,7 @@ draw :: (using graph: *Graph_2D_Line, x_mapper: *Mapper, y_mapper: *Mapper) {
     }
     DrawLines(mx, my, color, thickness);
 }
-update :: inline (using graph: *Graph_2D_Line, x_mapper: *Mapper, y_mapper: *Mapper) {}
+update :: inline (using graph: *Graph_2D_Line, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
 bounds_x :: inline (using graph: *Graph_2D_Line) -> float32, float32 {
     return min(x), max(x);
 }
@@ -113,7 +113,7 @@ fill :: (x: []float32, y1: []float32, y2: []float32 = .[], color: Color = RED) -
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Fill, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     mx  := map(x_mapper, x );
     my1 := map(y_mapper, y1);
     my2 := map(y_mapper, y2);
@@ -166,7 +166,7 @@ draw :: (using graph: *Graph_2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {
 
     DrawTriangleStrip(pts, color);
 }
-update :: inline (using graph: *Graph_2D_Fill, x_mapper: *Mapper, y_mapper: *Mapper) {}
+update :: inline (using graph: *Graph_2D_Fill, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
 bounds_x :: inline (using graph: *Graph_2D_Fill) -> float32, float32 {
     return min(x), max(x);
 }
@@ -219,7 +219,7 @@ symbols :: (x: []float32, y: []float32, symbol := Symbols.CIRCLE, color := RED, 
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     mx := map(x_mapper, x);
     my := map(y_mapper, y);
     defer {
@@ -232,7 +232,7 @@ draw :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper, y_mapper: *Mapper) {
         DrawTextureEx(tex, vec2(mx[i],my[i]) - vec2(size,size), 0.0, size/(0.5*SYMBOL_SIZE), color);
     }
 }
-update :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper, y_mapper: *Mapper) {
+update :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     if symbols_initialized then return;
 
     for *symbol_render_textures {
@@ -298,7 +298,7 @@ bars :: (x: []float32, y: []float32, color := SKYBLUE, bar_type: BarType = .SIMP
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Bars, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Bars, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     mx := map(x_mapper, x);
     my := map(y_mapper, y);
     defer {
@@ -334,7 +334,7 @@ draw :: (using graph: *Graph_2D_Bars, x_mapper: *Mapper, y_mapper: *Mapper) {
             }
     }
 }
-update :: inline (using graph: *Graph_2D_Bars, x_mapper: *Mapper, y_mapper: *Mapper) {}
+update :: inline (using graph: *Graph_2D_Bars, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
 bounds_x :: inline (using graph: *Graph_2D_Bars) -> float32, float32 {
     return min(x), max(x);
 }
@@ -379,7 +379,7 @@ error_bars :: (val: []float32, low: []float32, high: []float32, y_error := true,
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Error, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Error, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     mv, mlow, mhigh : []float32;
     if y_error {
         mv    = map(x_mapper, val);
@@ -410,7 +410,7 @@ draw :: (using graph: *Graph_2D_Error, x_mapper: *Mapper, y_mapper: *Mapper) {
         }
     }
 }
-update :: inline (using graph: *Graph_2D_Error, x_mapper: *Mapper, y_mapper: *Mapper) {}
+update :: inline (using graph: *Graph_2D_Error, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
 bounds_x :: inline (using graph: *Graph_2D_Error) -> float32, float32 {
     if y_error {
         return min(val), max(val);
@@ -456,7 +456,7 @@ boxes :: (x1: []float32, y1: []float32, x2: []float32 = .[], y2: []float32 = .[]
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Boxes, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Boxes, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     assert(x1.count != 0);
     assert(y1.count != 0);
     assert(x1.count == y1.count);
@@ -530,7 +530,7 @@ draw :: (using graph: *Graph_2D_Boxes, x_mapper: *Mapper, y_mapper: *Mapper) {
         }
     }
 }
-update :: inline (using graph: *Graph_2D_Boxes, x_mapper: *Mapper, y_mapper: *Mapper) {}
+update :: inline (using graph: *Graph_2D_Boxes, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
 bounds_x :: inline (using graph: *Graph_2D_Boxes) -> float32, float32 {
     if x2.count == 0 then return min(x1), max(x1);
     return min(min(x1),min(x2)), max(max(x1),max(x2));
@@ -644,7 +644,7 @@ heatmap :: (rect: Rectangle, width: int, height: int, values: []float32, gradien
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     if values.count != width*height {
         DrawRectangleRec(rect, PURPLE);
     }
@@ -657,7 +657,7 @@ draw :: (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper, y_mapper: *Mapper) {
     DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(x0,y1,x1-x0,-(y1-y0)), vec2(), 0.0, WHITE);
     // DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(200,200,width,height), vec2(), 0.0, WHITE);
 }
-update :: inline (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper, y_mapper: *Mapper) {
+update :: inline (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     if !texture_initialized {
         texture = LoadRenderTexture(cast(s32)width, cast(s32)height);
         texture_initialized = true;
@@ -712,12 +712,12 @@ multi :: (graphs2d: ..*Graph_2D) -> *Graph_2D_Multi {
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Multi, x_mapper: *Mapper, y_mapper: *Mapper) {
+draw :: (using graph: *Graph_2D_Multi, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     for graphs2d {
         draw(it, x_mapper, y_mapper);
     }
 }
-update :: inline (using graph: *Graph_2D_Multi, x_mapper: *Mapper, y_mapper: *Mapper) {
+update :: inline (using graph: *Graph_2D_Multi, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
     for graphs2d {
         update(it, x_mapper, y_mapper);
     }

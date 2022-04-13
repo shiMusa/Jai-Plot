@@ -10,14 +10,15 @@
 // ##     ## ##     ## ####  ######
 
 
-Axis_Types :: Type.[
+Axis_2D_Types :: Type.[
     Axis_2D_Cartesian
 ];
 
-Axis :: struct {
-    axis_rectangle: Rectangle;
+Axis_2D :: struct {
     type: Type;
+    axis_rectangle: Rectangle;
     graphs2d: [..]*Graph_2D;
+    
     activated: bool;
 }
 
@@ -26,7 +27,7 @@ Axis :: struct {
 plot2d :: (graph2d: *Graph_2D) {
     array_add(*_plot.active_axis.graphs2d, graph2d);
 }
-plot2d :: (ax: *Axis, graph2d: *Graph_2D) {
+plot2d :: (ax: *Axis_2D, graph2d: *Graph_2D) {
     array_add(*ax.graphs2d, graph2d);
 }
 #scope_module
@@ -34,37 +35,37 @@ plot2d :: (ax: *Axis, graph2d: *Graph_2D) {
 
 
 
-intersection_axis :: (b: *Axis, pos: Vector2) -> bool {
-    #insert #run specialize(Axis_Types, "intersection_axis", .["pos"], 1);
+intersection_axis :: (b: *Axis_2D, pos: Vector2) -> bool {
+    #insert #run specialize(Axis_2D_Types, "intersection_axis", .["pos"], 1);
 }
-draw :: (b: *Axis) {
-    #insert #run specialize(Axis_Types, "draw");
+draw :: (b: *Axis_2D) {
+    #insert #run specialize(Axis_2D_Types, "draw");
 }
-update :: (b: *Axis) {
-    #insert #run specialize(Axis_Types, "update");
+update :: (b: *Axis_2D) {
+    #insert #run specialize(Axis_2D_Types, "update");
 }
-reset :: (b: *Axis) {
-    #insert #run specialize(Axis_Types, "reset");
+reset :: (b: *Axis_2D) {
+    #insert #run specialize(Axis_2D_Types, "reset");
 }
-zoom :: (b: *Axis, position: Vector2, wheel: float32) {
-    #insert #run specialize(Axis_Types, "zoom", .["position", "wheel"]);
+zoom :: (b: *Axis_2D, position: Vector2, wheel: float32) {
+    #insert #run specialize(Axis_2D_Types, "zoom", .["position", "wheel"]);
 }
-fit_into_rectangle :: (b: *Axis, rectangle: Rectangle) {
-    #insert #run specialize(Axis_Types, "fit_into_rectangle", .["rectangle"]);
+fit_into_rectangle :: (b: *Axis_2D, rectangle: Rectangle) {
+    #insert #run specialize(Axis_2D_Types, "fit_into_rectangle", .["rectangle"]);
 }
-fit_data :: (b: *Axis, overwrite_constraints: bool = false) {
-    #insert #run specialize(Axis_Types, "fit_data", .["overwrite_constraints"]);
+fit_data :: (b: *Axis_2D, overwrite_constraints: bool = false) {
+    #insert #run specialize(Axis_2D_Types, "fit_data", .["overwrite_constraints"]);
 }
-fit_bounds :: (b: *Axis, gui_rect: Rectangle, overwrite_constraints : bool = false) {
-    #insert #run specialize(Axis_Types, "fit_bounds", .["gui_rect", "overwrite_constraints"]);
+fit_bounds :: (b: *Axis_2D, gui_rect: Rectangle, overwrite_constraints : bool = false) {
+    #insert #run specialize(Axis_2D_Types, "fit_bounds", .["gui_rect", "overwrite_constraints"]);
 }
-mouse_dragging :: (b: *Axis) -> *MouseState_Dragging {
-    #insert #run specialize(Axis_Types, "mouse_dragging", .[], 1);
+mouse_dragging :: (b: *Axis_2D) -> *MouseState_Dragging {
+    #insert #run specialize(Axis_2D_Types, "mouse_dragging", .[], 1);
 }
-mouse_rmb_dragging :: (b: *Axis) -> *MouseState_RMB_Dragging {
-    #insert #run specialize(Axis_Types, "mouse_rmb_dragging", .[], 1);
+mouse_rmb_dragging :: (b: *Axis_2D) -> *MouseState_RMB_Dragging {
+    #insert #run specialize(Axis_2D_Types, "mouse_rmb_dragging", .[], 1);
 }
-bounds_x :: (using ax: *Axis) -> float32, float32 {
+bounds_x :: (using ax: *Axis_2D) -> float32, float32 {
     assert(graphs2d.count > 0);
     _min, _max := bounds_x(graphs2d[0]);
     for i:1..graphs2d.count-1 {
@@ -74,7 +75,7 @@ bounds_x :: (using ax: *Axis) -> float32, float32 {
     }
     return _min, _max;
 }
-bounds_y :: (using ax: *Axis) -> float32, float32 {
+bounds_y :: (using ax: *Axis_2D) -> float32, float32 {
     assert(graphs2d.count > 0);
     _min, _max := bounds_y(graphs2d[0]);
     for i:1..graphs2d.count-1 {
@@ -84,7 +85,7 @@ bounds_y :: (using ax: *Axis) -> float32, float32 {
     }
     return _min, _max;
 }
-bounds_extra :: (using ax: *Axis, index: int) -> float32, float32 {
+bounds_extra :: (using ax: *Axis_2D, index: int) -> float32, float32 {
     assert(graphs2d.count > 0);
 
     _min := Math.FLOAT32_MAX;
@@ -114,15 +115,15 @@ bounds_extra :: (using ax: *Axis, index: int) -> float32, float32 {
 
 #scope_export
 Axis_2D_Cartesian :: struct {
-    using _axis: Axis;
+    using _axis: Axis_2D;
 
     inner_rect : Rectangle;
 
-    original_x_mapper: *Mapper;
-    original_y_mapper: *Mapper;
+    original_x_mapper: *Mapper_1D;
+    original_y_mapper: *Mapper_1D;
 
-    x_mapper: *Mapper;
-    y_mapper: *Mapper;
+    x_mapper: *Mapper_1D;
+    y_mapper: *Mapper_1D;
     flip_y: bool = true;
 
     button_reset        : *Button;
@@ -159,7 +160,7 @@ Axis_2D_Cartesian :: struct {
     x_padding := 8;
     tick_padding := 5;
 }
-axis_2d_cartesian :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null, title:="", x_label:="", y_label:="") -> *Axis_2D_Cartesian {
+axis_2d_cartesian :: (x_mapper: *Mapper_1D = null, y_mapper: *Mapper_1D = null, title:="", x_label:="", y_label:="") -> *Axis_2D_Cartesian {
     res := New(Axis_2D_Cartesian);
     res.type = Axis_2D_Cartesian;
     res.axis_rectangle = WINDOW_RECT;
@@ -172,8 +173,8 @@ axis_2d_cartesian :: (x_mapper: *Mapper = null, y_mapper: *Mapper = null, title:
     res.button_grid          = button_framed(Rectangle.{}, "#"    , res.font_size);
 
     
-    res.x_mapper = ifx x_mapper then x_mapper else mapper_linear();
-    res.y_mapper = ifx y_mapper then y_mapper else mapper_linear();
+    res.x_mapper = ifx x_mapper then x_mapper else mapper_1d_linear();
+    res.y_mapper = ifx y_mapper then y_mapper else mapper_1d_linear();
 
     res.title   = title;
     res.title_padding = ifx title == "" then 0.0 else 3.0*res.font_size;
@@ -246,15 +247,15 @@ equal_scaling :: (using axis: *Axis_2D_Cartesian) {
         xmax =  dydp*width*0.5 + x0;
     }
 
-    x_mapper = mapper_constraint(
-        mapper_linear(), 
+    x_mapper = mapper_1d_constraint(
+        mapper_1d_linear(), 
         xmin, 
         xmax, 
         x, 
         x + width
     );
-    y_mapper = mapper_constraint(
-        mapper_linear(), 
+    y_mapper = mapper_1d_constraint(
+        mapper_1d_linear(), 
         ymin, 
         ymax, 
         y         , //ifx flip_y then y          else y + height, 
@@ -318,10 +319,10 @@ on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
             if is_over_reset || is_over_eq_sc || is_over_fit then return;
 
             if e.button == 0 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
-                broadcast(_broadcaster, event_axis(cast(*Axis)ax, .MOVE));
+                broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .MOVE));
             }
             if e.button == 1 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
-                broadcast(_broadcaster, event_axis(cast(*Axis)ax, .RECT_ZOOM));
+                broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .RECT_ZOOM));
             }
         case Event_Mouse_Wheel;
             e := cast(*Event_Mouse_Wheel)event;
@@ -356,9 +357,9 @@ draw :: (using ax: *Axis_2D_Cartesian) {
             if mi > ma { mi, ma = swap(mi, ma); }
 
             if get_inner_type(x_mapper) == {
-                case Mapper_Linear;
+                case Mapper_1D_Linear;
                     xticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
-                case Mapper_Logarithmic;
+                case Mapper_1D_Logarithmic;
                     xticks = ticks_logarithmic(mi, ma, 10.0);
             }
         }
@@ -369,9 +370,9 @@ draw :: (using ax: *Axis_2D_Cartesian) {
             if mi > ma { mi, ma = swap(mi, ma); }
 
             if get_inner_type(y_mapper) == {
-                case Mapper_Linear;
+                case Mapper_1D_Linear;
                     yticks = ticks_linear(mi, ma, 10.0, exponent_shift - log10_of_5 );
-                case Mapper_Logarithmic;
+                case Mapper_1D_Logarithmic;
                     yticks = ticks_logarithmic(mi, ma, 10.0);
             }
         }
@@ -586,3 +587,57 @@ draw :: (using ax: *Axis_2D_Cartesian) {
 }
 
 
+// // ########   #######  ##          ###    ########      #######  ########
+// // ##     ## ##     ## ##         ## ##   ##     ##    ##     ## ##     ##
+// // ##     ## ##     ## ##        ##   ##  ##     ##           ## ##     ##
+// // ########  ##     ## ##       ##     ## ########      #######  ##     ##
+// // ##        ##     ## ##       ######### ##   ##      ##        ##     ##
+// // ##        ##     ## ##       ##     ## ##    ##     ##        ##     ##
+// // ##         #######  ######## ##     ## ##     ##    ######### ########
+
+// Axis_2D_Polar :: struct {
+//     using _axis: Axis_2D;
+
+//     original_mapper_angle : *Mapper_1D;
+//     original_mapper_radius: *Mapper_1D;
+//     original_mapper: *Mapper_2D;
+    
+//     mapper_angle : *Mapper_1D;
+//     mapper_radius: *Mapper_1D;
+//     mapper: *Mapper_2D;
+// }
+
+// axis_2d_polar :: (mapper: *Mapper_2D) -> *Axis_2D_Polar {
+//     res := New(Axis_2D_Polar);
+//     res.type = Axis_2D_Polar;
+//     res.mapper = mapper;
+
+//     return res;
+// }
+
+// intersection_axis :: (b: *Axis_2D_Polar, pos: Vector2) -> bool {
+//     return false;
+// }
+// draw :: (b: *Axis_2D_Polar) {
+// }
+// update :: (using b: *Axis_2D_Polar) {
+//     for graphs2d {
+//         update(it, mapper_angle, mapper_radius);
+//     }
+// }
+// reset :: (b: *Axis_2D_Polar) {
+// }
+// zoom :: (b: *Axis_2D_Polar, position: Vector2, wheel: float32) {
+// }
+// fit_into_rectangle :: (b: *Axis_2D_Polar, rectangle: Rectangle) {
+// }
+// fit_data :: (b: *Axis_2D_Polar, overwrite_constraints: bool = false) {
+// }
+// fit_bounds :: (b: *Axis_2D_Polar, gui_rect: Rectangle, overwrite_constraints : bool = false) {
+// }
+// mouse_dragging :: (b: *Axis_2D_Polar) -> *MouseState_Dragging {
+//     assert(false, "not yet implemented\n");
+// }
+// mouse_rmb_dragging :: (b: *Axis_2D_Polar) -> *MouseState_RMB_Dragging {
+//     assert(false, "not yet implemented\n");
+// }

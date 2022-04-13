@@ -9,9 +9,9 @@ Math :: #import "Math";
 #load "jai-raylib.jai";
 #load "Events.jai";
 #load "Gui.jai";
-#load "Mapper.jai";
-#load "Graph2D.jai";
-#load "Axis.jai";
+#load "Mapper_1D.jai";
+#load "Graph_2D.jai";
+#load "Axis_2D.jai";
 #load "Mouse.jai";
 #load "Page.jai";
 
@@ -37,7 +37,7 @@ Plot :: struct {
     active_page: *Page;
     active_page_index: s32;
 
-    active_axis: *Axis;
+    active_axis: *Axis_2D;
 
     running: bool = false;
     callback: () -> ();
@@ -209,8 +209,8 @@ add_page :: (p: *$P/Page, activate_page : bool = true) {
 }
 
 
-activate :: (axis: *$A/Axis) {
-    _plot.active_axis = cast(*Axis)axis;
+activate :: (axis: *$A/Axis_2D) {
+    _plot.active_axis = cast(*Axis_2D)axis;
 }
 
 plot_wait_for_close :: () {

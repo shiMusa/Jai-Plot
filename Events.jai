@@ -142,9 +142,9 @@ Event_AxisType :: enum u8 {
 Event_Axis :: struct {
     using event: Event;
     axis_event_type: Event_AxisType;
-    axis: *Axis;
+    axis: *Axis_2D;
 }
-event_axis :: (axis: *Axis, type: Event_AxisType) -> *Event_Axis {
+event_axis :: (axis: *Axis_2D, type: Event_AxisType) -> *Event_Axis {
     res := New(Event_Axis);
     res.type = Event_Axis;
     res.axis_event_type = type;
