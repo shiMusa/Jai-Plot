@@ -10,6 +10,7 @@ Math :: #import "Math";
 #load "Events.jai";
 #load "Gui.jai";
 #load "Mapper_1D.jai";
+#load "Mapper_2D.jai";
 #load "Graph_2D.jai";
 #load "Axis_2D.jai";
 #load "Mouse.jai";
