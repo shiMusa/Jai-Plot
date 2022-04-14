@@ -587,57 +587,67 @@ draw :: (using ax: *Axis_2D_Cartesian) {
 }
 
 
-// // ########   #######  ##          ###    ########      #######  ########
-// // ##     ## ##     ## ##         ## ##   ##     ##    ##     ## ##     ##
-// // ##     ## ##     ## ##        ##   ##  ##     ##           ## ##     ##
-// // ########  ##     ## ##       ##     ## ########      #######  ##     ##
-// // ##        ##     ## ##       ######### ##   ##      ##        ##     ##
-// // ##        ##     ## ##       ##     ## ##    ##     ##        ##     ##
-// // ##         #######  ######## ##     ## ##     ##    ######### ########
+// ########   #######  ##          ###    ########      #######  ########
+// ##     ## ##     ## ##         ## ##   ##     ##    ##     ## ##     ##
+// ##     ## ##     ## ##        ##   ##  ##     ##           ## ##     ##
+// ########  ##     ## ##       ##     ## ########      #######  ##     ##
+// ##        ##     ## ##       ######### ##   ##      ##        ##     ##
+// ##        ##     ## ##       ##     ## ##    ##     ##        ##     ##
+// ##         #######  ######## ##     ## ##     ##    ######### ########
 
-// Axis_2D_Polar :: struct {
-//     using _axis: Axis_2D;
+Axis_2D_Polar :: struct {
+    using _axis: Axis_2D;
 
-//     original_mapper_angle : *Mapper_1D;
-//     original_mapper_radius: *Mapper_1D;
-//     original_mapper: *Mapper_2D;
+    original_mapper_radius  : *Mapper_1D;        // map datapoint radial component
+    original_mapper_polar   : *Mapper_2D_Polar;  // map from polar coordinates to cartesian
+    original_mapper_pixel_x : *Mapper_1D_Linear; // map to pixel position x 
+    original_mapper_pixel_y : *Mapper_1D_Linear; // map to pixel position y
     
-//     mapper_angle : *Mapper_1D;
-//     mapper_radius: *Mapper_1D;
-//     mapper: *Mapper_2D;
-// }
+    mapper_radius  : *Mapper_1D;        // map datapoint radial component
+    mapper_polar   : *Mapper_2D_Polar;  // map from polar coordinates to cartesian
+    mapper_pixel_x : *Mapper_1D_Linear; // map to pixel position x 
+    mapper_pixel_y : *Mapper_1D_Linear; // map to pixel position y
+}
 
-// axis_2d_polar :: (mapper: *Mapper_2D) -> *Axis_2D_Polar {
-//     res := New(Axis_2D_Polar);
-//     res.type = Axis_2D_Polar;
-//     res.mapper = mapper;
+axis_2d_polar :: (mapper_radius: *Mapper_1D = null) -> *Axis_2D_Polar {
+    res := New(Axis_2D_Polar);
+    res.type = Axis_2D_Polar;
+    res.mapper_radius = ifx mapper_radius then mapper_radius else mapper_1d_linear();
+    res.mapper_polar = mapper_2d_polar();
+    res.mapper_pixel_x = mapper_1d_linear();
+    res.mapper_pixel_y = mapper_1d_linear();
 
-//     return res;
-// }
+    res.original_mapper_radius  = clone(res.mapper_radius);
+    res.original_mapper_polar   = clone(res.mapper_polar);
+    res.original_mapper_pixel_x = clone(res.mapper_pixel_x);
+    res.original_mapper_pixel_y = clone(res.mapper_pixel_y);
 
-// intersection_axis :: (b: *Axis_2D_Polar, pos: Vector2) -> bool {
-//     return false;
-// }
-// draw :: (b: *Axis_2D_Polar) {
-// }
-// update :: (using b: *Axis_2D_Polar) {
-//     for graphs2d {
-//         update(it, mapper_angle, mapper_radius);
-//     }
-// }
-// reset :: (b: *Axis_2D_Polar) {
-// }
-// zoom :: (b: *Axis_2D_Polar, position: Vector2, wheel: float32) {
-// }
-// fit_into_rectangle :: (b: *Axis_2D_Polar, rectangle: Rectangle) {
-// }
-// fit_data :: (b: *Axis_2D_Polar, overwrite_constraints: bool = false) {
-// }
-// fit_bounds :: (b: *Axis_2D_Polar, gui_rect: Rectangle, overwrite_constraints : bool = false) {
-// }
-// mouse_dragging :: (b: *Axis_2D_Polar) -> *MouseState_Dragging {
-//     assert(false, "not yet implemented\n");
-// }
-// mouse_rmb_dragging :: (b: *Axis_2D_Polar) -> *MouseState_RMB_Dragging {
-//     assert(false, "not yet implemented\n");
-// }
+    return res;
+}
+
+intersection_axis :: (b: *Axis_2D_Polar, pos: Vector2) -> bool {
+    return false;
+}
+draw :: (b: *Axis_2D_Polar) {
+}
+update :: (using b: *Axis_2D_Polar) {
+    for graphs2d {
+        update(it, mapper_angle, mapper_radius);
+    }
+}
+reset :: (b: *Axis_2D_Polar) {
+}
+zoom :: (b: *Axis_2D_Polar, position: Vector2, wheel: float32) {
+}
+fit_into_rectangle :: (b: *Axis_2D_Polar, rectangle: Rectangle) {
+}
+fit_data :: (b: *Axis_2D_Polar, overwrite_constraints: bool = false) {
+}
+fit_bounds :: (b: *Axis_2D_Polar, gui_rect: Rectangle, overwrite_constraints : bool = false) {
+}
+mouse_dragging :: (b: *Axis_2D_Polar) -> *MouseState_Dragging {
+    assert(false, "not yet implemented\n");
+}
+mouse_rmb_dragging :: (b: *Axis_2D_Polar) -> *MouseState_RMB_Dragging {
+    assert(false, "not yet implemented\n");
+}

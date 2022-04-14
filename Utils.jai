@@ -24,10 +24,27 @@ max :: (arr: []$T) -> T {
     return max;
 }
 
+// see https://www.wikiwand.com/en/Polar_coordinate_system
+atan2 :: (y: float32, x: float32) -> float32 {
+    T :: float32;
 
-inv_log_of_10 :: #run cast(float32)1.0/Math.log(10.0);
+    if x > 0 then return cast(T)Math.atan(y/x);
+    if x < 0 {
+        if y >= 0  { return cast(T)Math.atan(y/x)+PI32; }
+        else       { return cast(T)Math.atan(y/x)-PI32; }
+    }
+    if y > 0 then return  0.5*PI32;
+    if y < 0 then return -0.5*PI32;
+    return Math.FLOAT32_NAN;
+}
+
+inv_log_of_10 :: #run cast(float32)(1.0/Math.log(10.0));
 log10 :: inline (x: float32) -> float32 {
     return cast(float32)(Math.log(x)*inv_log_of_10);
+}
+inv_log_of_2 :: #run cast(float32)(1.0/Math.log(2.0));
+log2 :: inline (x: float32) -> float32 {
+    return cast(float32)(Math.log(x)*inv_log_of_2);
 }
 
 log10_of_5 :: #run log10(5.0);
