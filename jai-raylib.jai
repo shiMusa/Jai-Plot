@@ -68,6 +68,18 @@ DrawLineStrip :: inline (points: []Vector2, color: Color) {
     DrawLineStrip(points.data, cast(s32)points.count, color);
 }
 
+
+DrawCircleJai :: (center: Vector2, radius: float32, color: Color, thickness: float32 = 1.0, segments : int = 32) {
+    p := NewArray(segments+1, Vector2);
+    defer array_free(p);
+    for i:0..segments {
+        phi := cast(float32)i/segments * 2.0 * PI32;
+        p[i] = radius * vec2(Math.cos(phi), Math.sin(phi)) + center;
+    }
+    DrawLines(p, color, thickness);
+}
+
+
 DrawLines :: (points: []Vector2, color: Color, thickness: float = 1.0) {
     for i: 0..points.count-2 {
         DrawLineEx(points[i], points[i+1], thickness, color);

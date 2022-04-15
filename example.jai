@@ -196,6 +196,20 @@ main :: () {
     }
 
 
+    {
+        add_page(page_single(axis_2d_polar(), "polar map"));
+
+        angle  := NewArray(33, float32);
+        radius := NewArray(33, float32);
+        for i:0..32 {
+            angle[i]  = cast(float32)i/32 * 2.0 * PI32;
+            tmp := Math.cos(angle[i]);
+            radius[i] = tmp*tmp;
+        }
+
+        plot2d(line(angle,radius));
+    }
+
     simulation();
 
     plot_wait_for_close();

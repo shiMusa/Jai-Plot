@@ -11,7 +11,8 @@
 
 
 Axis_2D_Types :: Type.[
-    Axis_2D_Cartesian
+    Axis_2D_Cartesian,
+    Axis_2D_Polar
 ];
 
 Axis_2D :: struct {
@@ -598,6 +599,8 @@ draw :: (using ax: *Axis_2D_Cartesian) {
 Axis_2D_Polar :: struct {
     using _axis: Axis_2D;
 
+    mapper_angle : *Mapper_1D_Linear;
+
     original_mapper_radius  : *Mapper_1D;        // map datapoint radial component
     original_mapper_polar   : *Mapper_2D_Polar;  // map from polar coordinates to cartesian
     original_mapper_pixel_x : *Mapper_1D_Linear; // map to pixel position x 
@@ -607,8 +610,10 @@ Axis_2D_Polar :: struct {
     mapper_polar   : *Mapper_2D_Polar;  // map from polar coordinates to cartesian
     mapper_pixel_x : *Mapper_1D_Linear; // map to pixel position x 
     mapper_pixel_y : *Mapper_1D_Linear; // map to pixel position y
-}
 
+    show_frame : bool = true;
+}
+#scope_export
 axis_2d_polar :: (mapper_radius: *Mapper_1D = null) -> *Axis_2D_Polar {
     res := New(Axis_2D_Polar);
     res.type = Axis_2D_Polar;
@@ -616,6 +621,8 @@ axis_2d_polar :: (mapper_radius: *Mapper_1D = null) -> *Axis_2D_Polar {
     res.mapper_polar = mapper_2d_polar();
     res.mapper_pixel_x = mapper_1d_linear();
     res.mapper_pixel_y = mapper_1d_linear();
+
+    res.mapper_angle = mapper_1d_linear();
 
     res.original_mapper_radius  = clone(res.mapper_radius);
     res.original_mapper_polar   = clone(res.mapper_polar);
@@ -625,10 +632,16 @@ axis_2d_polar :: (mapper_radius: *Mapper_1D = null) -> *Axis_2D_Polar {
     return res;
 }
 
+#scope_module
 intersection_axis :: (b: *Axis_2D_Polar, pos: Vector2) -> bool {
     return false;
 }
-draw :: (b: *Axis_2D_Polar) {
+draw :: (using b: *Axis_2D_Polar) {
+    print("drawing %\n", axis_rectangle);
+    if show_frame {
+        r := min(axis_rectangle.width, axis_rectangle.height)*0.5;
+        DrawCircleJai(center(axis_rectangle), r, BLACK, 2.0, 128);
+    }
 }
 update :: (using b: *Axis_2D_Polar) {
     for graphs2d {
@@ -639,7 +652,8 @@ reset :: (b: *Axis_2D_Polar) {
 }
 zoom :: (b: *Axis_2D_Polar, position: Vector2, wheel: float32) {
 }
-fit_into_rectangle :: (b: *Axis_2D_Polar, rectangle: Rectangle) {
+fit_into_rectangle :: (using b: *Axis_2D_Polar, rectangle: Rectangle) {
+    axis_rectangle = rectangle;
 }
 fit_data :: (b: *Axis_2D_Polar, overwrite_constraints: bool = false) {
 }
