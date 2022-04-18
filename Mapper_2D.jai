@@ -9,7 +9,8 @@
 
 Mapper_2D_Types :: Type.[
     Mapper_2D_Polar,
-    Mapper_2D_Cartesian
+    Mapper_2D_Cartesian,
+    Mapper_2D_Multi
 ];
 
 
@@ -72,6 +73,35 @@ map_inv :: (b: *Mapper_2D, x: []float32, y: []float32) -> []Vector2 {
     return res;
 }
 
+
+
+// #### ########  ######## ##    ## ######## #### ######## ##    ##
+//  ##  ##     ## ##       ###   ##    ##     ##     ##     ##  ##
+//  ##  ##     ## ##       ####  ##    ##     ##     ##      ####
+//  ##  ##     ## ######   ## ## ##    ##     ##     ##       ##
+//  ##  ##     ## ##       ##  ####    ##     ##     ##       ##
+//  ##  ##     ## ##       ##   ###    ##     ##     ##       ##
+// #### ########  ######## ##    ##    ##    ####    ##       ##
+
+Mapper_2D_Identity :: struct {
+    using _m: Mapper_2D;
+}
+
+mapper_2d_identity :: () ->  *Mapper_2D_Identity {
+    res := New(Mapper_2D_Identity);
+    res.type = Mapper_2D_Identity;
+    return res;
+}
+
+clone :: inline (using cm: *Mapper_2D_Identity) -> *Mapper_2D_Identity {
+    return mapper_2d_identity();
+}
+map :: inline (using b: *Mapper_2D_Identity, p: Vector2) -> Vector2 {
+    return p;
+}
+map_inv :: inline (b: *Mapper_2D_Identity, p: Vector2) -> Vector2 {
+    return p;
+}
 
 
 //  ######     ###    ########  ######## ########  ######  ####    ###    ##    ##
@@ -145,4 +175,54 @@ map :: (using b: *Mapper_2D_Polar, p: Vector2) -> Vector2 {
 }
 map_inv :: (b: *Mapper_2D_Polar, p: Vector2) -> Vector2 {
     return vec2(Math.atan2(p.y,p.x), Math.sqrt(p.x*p.x+p.y*p.y));
+}
+
+
+// ##     ## ##     ## ##       ######## ####
+// ###   ### ##     ## ##          ##     ##
+// #### #### ##     ## ##          ##     ##
+// ## ### ## ##     ## ##          ##     ##
+// ##     ## ##     ## ##          ##     ##
+// ##     ## ##     ## ##          ##     ##
+// ##     ##  #######  ########    ##    ####
+
+Mapper_2D_Multi :: struct {
+    using _m: Mapper_2D;
+    mappers: []*Mapper_2D;
+}
+
+mapper_2d_multi :: (mappers: ..*Mapper_2D) -> *Mapper_2D_Multi {
+    res := New(Mapper_2D_Multi);
+    res.type = Mapper_2D_Multi;
+    res.mappers = NewArray(mappers.count, *Mapper_2D, false);
+    for mappers {
+        res.mappers[it_index] = it;
+    }
+    return res;
+}
+
+clone :: (using cm: *Mapper_2D_Multi) -> *Mapper_2D_Multi {
+    res := New(Mapper_2D_Multi);
+    res.type = Mapper_2D_Multi;
+    res.mappers = NewArray(mappers.count, *Mapper_2D, false);
+    for mappers {
+        res.mappers[it_index] = clone(it);
+    }
+    return res;
+}
+// angle, radius
+map :: (using b: *Mapper_2D_Multi, p: Vector2) -> Vector2 {
+    res : Vector2;
+    for mappers {
+        res = map(it, res);
+    }
+    return res;
+}
+map_inv :: (b: *Mapper_2D_Multi, p: Vector2) -> Vector2 {
+    res : Vector2;
+    for i:0..mappers.count-1 {
+        j := mappers.count-1-i;
+        res = map_inv(mappers[j], res);
+    }
+    return res;
 }

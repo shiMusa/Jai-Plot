@@ -334,11 +334,8 @@ on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
     }
 }
 update :: (using ax: *Axis_2D_Cartesian) {
-    m2d := mapper_2d_cartesian(x_mapper, y_mapper);
-    defer free(m2d);
-
     for graphs2d {
-        update(it, m2d);
+        update(it);
     }
 }
 draw :: (using ax: *Axis_2D_Cartesian) {
@@ -411,13 +408,8 @@ draw :: (using ax: *Axis_2D_Cartesian) {
     }
 
     if hide_overflow then BeginScissorMode(cast(s32)inner_rect.x, cast(s32)inner_rect.y, cast(s32)inner_rect.width, cast(s32)inner_rect.height);
-    {
-        m2d := mapper_2d_cartesian(x_mapper, y_mapper);
-        defer free(m2d);
-
-        for graphs2d {
-            draw(it, m2d);
-        }
+    for graphs2d {
+        draw(it, ax);
     }
     if hide_overflow then EndScissorMode();
 
@@ -612,13 +604,11 @@ Axis_2D_Polar :: struct {
     padding_left  : float32 = 20.0;
     padding_right : float32 = 20.0;
 
-    mapper_angle : *Mapper_1D_Linear;
 
-    original_mapper_radius  : *Mapper_1D;        // map datapoint radial component
-    original_mapper_polar   : *Mapper_2D_Polar;  // map from polar coordinates to cartesian
-    original_mapper_pixel_x : *Mapper_1D_Linear; // map to pixel position x 
-    original_mapper_pixel_y : *Mapper_1D_Linear; // map to pixel position y
-    
+    original_mapper: *Mapper_2D_Multi;
+
+    mapper: *Mapper_2D_Multi;
+    mapper_angle   : *Mapper_1D;
     mapper_radius  : *Mapper_1D;        // map datapoint radial component
     mapper_polar   : *Mapper_2D_Polar;  // map from polar coordinates to cartesian
     mapper_pixel_x : *Mapper_1D_Linear; // map to pixel position x 
@@ -628,20 +618,21 @@ Axis_2D_Polar :: struct {
     show_quadrants : bool = true;
 }
 #scope_export
-axis_2d_polar :: (mapper_radius: *Mapper_1D = null) -> *Axis_2D_Polar {
+axis_2d_polar :: (mapper_radius: *Mapper_1D = null, mapper_angle: *Mapper_1D = null) -> *Axis_2D_Polar {
     res := New(Axis_2D_Polar);
     res.type = Axis_2D_Polar;
-    res.mapper_radius = ifx mapper_radius then mapper_radius else mapper_1d_linear();
+    res.mapper_angle  = ifx mapper_angle  then mapper_angle  else mapper_1d_identity();
+    res.mapper_radius = ifx mapper_radius then mapper_radius else mapper_1d_identity();
     res.mapper_polar = mapper_2d_polar();
     res.mapper_pixel_x = mapper_1d_linear();
     res.mapper_pixel_y = mapper_1d_linear();
+    res.mapper = mapper_2d_multi(
+        mapper_2d_cartesian(res.mapper_radius, res.mapper_angle),
+        res.mapper_polar,
+        mapper_2d_cartesian(res.mapper_pixel_x, res.mapper_pixel_y)
+    );
 
-    res.mapper_angle = mapper_1d_linear();
-
-    res.original_mapper_radius  = clone(res.mapper_radius);
-    res.original_mapper_polar   = clone(res.mapper_polar);
-    res.original_mapper_pixel_x = clone(res.mapper_pixel_x);
-    res.original_mapper_pixel_y = clone(res.mapper_pixel_y);
+    res.original_mapper = clone(res.mapper);
 
     return res;
 }
@@ -667,9 +658,9 @@ draw :: (using b: *Axis_2D_Polar) {
         DrawLineEx(c-vec2(0,r), c+vec2(0,r), 2.0, BLACK);
     }
 }
-update :: (using b: *Axis_2D_Polar) {
+update :: (using axis: *Axis_2D_Polar) {
     for graphs2d {
-        update(it, mapper_polar);
+        update(it);
     }
 }
 reset :: (b: *Axis_2D_Polar) {

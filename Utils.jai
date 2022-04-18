@@ -133,6 +133,7 @@ specialize :: (
     other_fct_args: []string = .[], 
     num_return_vars: int = 0,
     base: string = "b", 
+    base_pos: int = 0,
     type_var: string = "type"
 ) -> string {
     builder : String_Builder;
@@ -148,16 +149,34 @@ specialize :: (
                 if i != num_return_vars-1 then
                     append(*builder, ", ");
             }
-            print_to_builder(*builder, " := %(s", fct_name);
-            if other_fct_args.count != 0 {
-                append(*builder, ", ");
-                for a, ia: other_fct_args {
-                    print_to_builder(*builder, "%", a);
-                    if ia != other_fct_args.count-1 then 
+
+
+
+
+            print_to_builder(*builder, " := %(", fct_name);
+
+            if other_fct_args.count == 0 {
+                append(*builder, "s");
+            } else {                
+                i := 0;
+                while i < other_fct_args.count {
+                    if i == base_pos then 
+                        append(*builder, "s, ");
+                    
+                    print_to_builder(*builder, "%", other_fct_args[i]);
+                    
+                    if i != other_fct_args.count-1 then 
                         append(*builder, ", ");
+
+                    i += 1;
                 }
+                if base_pos == other_fct_args.count then 
+                    append(*builder, ", s");
             } 
             append(*builder, ");\n");
+
+
+
 
             append(*builder, "        return ");
             for i: 0..num_return_vars-1 {
@@ -168,14 +187,26 @@ specialize :: (
             append(*builder, ";\n");
         } else {
             append(*builder, "        ");
-            print_to_builder(*builder, "%(s", fct_name);
-            if other_fct_args.count != 0 {
-                append(*builder, ", ");
-                for a, ia: other_fct_args {
-                    print_to_builder(*builder, "%", a);
-                    if ia != other_fct_args.count-1 then 
+            
+            print_to_builder(*builder, "%(", fct_name);
+
+            if other_fct_args.count == 0 {
+                append(*builder, "s");
+            } else {                
+                i := 0;
+                while i < other_fct_args.count {
+                    if i == base_pos then 
+                        append(*builder, "s, ");
+                    
+                    print_to_builder(*builder, "%", other_fct_args[i]);
+                    
+                    if i != other_fct_args.count-1 then 
                         append(*builder, ", ");
+
+                    i += 1;
                 }
+                if base_pos == other_fct_args.count then 
+                    append(*builder, ", s");
             } 
             append(*builder, ");\n");
         }

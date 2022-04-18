@@ -9,6 +9,7 @@
 // ##     ## ##     ## ##        ##        ######## ##     ##     ###### ########
 
 Mapper_1D_Types :: Type.[
+    Mapper_1D_Identity,
     Mapper_1D_Linear,
     Mapper_1D_Logarithmic,
     Mapper_1D_Constraint
@@ -53,6 +54,45 @@ fit_bounds :: (b: *Mapper_1D, min_x: float32, max_x: float32, min_y: float32, ma
     #insert #run specialize(Mapper_1D_Types, "fit_bounds", .["min_x", "max_x", "min_y", "max_y", "overwrite_constraints"]);
 }
 
+
+
+// #### ########  ######## ##    ## ######## #### ######## ##    ##
+//  ##  ##     ## ##       ###   ##    ##     ##     ##     ##  ##
+//  ##  ##     ## ##       ####  ##    ##     ##     ##      ####
+//  ##  ##     ## ######   ## ## ##    ##     ##     ##       ##
+//  ##  ##     ## ##       ##  ####    ##     ##     ##       ##
+//  ##  ##     ## ##       ##   ###    ##     ##     ##       ##
+// #### ########  ######## ##    ##    ##    ####    ##       ##
+
+
+#scope_export
+Mapper_1D_Identity :: struct {
+    using _m : Mapper_1D;
+}
+#scope_module
+clone :: (m: *Mapper_1D_Identity) -> *Mapper_1D_Identity {
+    res := New(Mapper_1D_Identity);
+    res.type = Mapper_1D_Identity;
+    return res;
+}
+#scope_export
+mapper_1d_identity :: () -> *Mapper_1D_Identity {
+    res := New(Mapper_1D_Identity);
+    res.type = Mapper_1D_Identity;
+    return res;
+}
+#scope_module
+map :: inline (using lm: *Mapper_1D_Identity, x: float32) -> float32 {
+    return x;
+}
+map_inv :: inline (using lm: *Mapper_1D_Identity, y: float32) -> float32 {
+    return y;
+}
+match :: inline (lm: *Mapper_1D_Identity, x: float32, to_y: float32) {}
+fit_bounds :: inline (using lm: *Mapper_1D_Identity, min_x: float32, max_x: float32, min_y: float32, max_y: float32, overwrite_constraints: bool) {}
+get_inner_type :: inline (m: *Mapper_1D_Identity) -> Type {
+    return Mapper_1D_Identity;
+}
 
 
 
