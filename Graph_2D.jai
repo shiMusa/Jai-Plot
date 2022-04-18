@@ -24,11 +24,11 @@ Graph_2D :: struct {
     type: Type;
 }
 
-draw :: (b: *Graph_2D, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
-    #insert #run specialize(Graph_2D_Types, "draw", .["x_mapper", "y_mapper"]);
+draw :: (b: *Graph_2D, mapper: *Mapper_2D) {
+    #insert #run specialize(Graph_2D_Types, "draw", .["mapper"]);
 }
-update :: (b: *Graph_2D, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
-    #insert #run specialize(Graph_2D_Types, "update", .["x_mapper", "y_mapper"]);
+update :: (b: *Graph_2D, mapper: *Mapper_2D) {
+    #insert #run specialize(Graph_2D_Types, "update", .["mapper"]);
 }
 bounds_x :: (b: *Graph_2D) -> float32, float32 {
     #insert #run specialize(Graph_2D_Types, "bounds_x", num_return_vars=2);
@@ -65,16 +65,17 @@ line :: (x: []float32, y: []float32, color: Color = RED, thickness: float32 = 2.
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Line, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
-    mx := map(x_mapper, x);
-    my := map(y_mapper, y);
-    defer {
-        array_free(mx);
-        array_free(my);
+draw :: (using graph: *Graph_2D_Line, mapper: *Mapper_2D) {
+    m := NewArray(x.count, Vector2, false);
+    defer array_free(m);
+
+    for i:0..x.count-1 {
+        m[i] = map(mapper, vec2(x[i], y[i]));
     }
-    DrawLines(mx, my, color, thickness);
+
+    DrawLines(m, color, thickness);
 }
-update :: inline (using graph: *Graph_2D_Line, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
+update :: inline (using graph: *Graph_2D_Line, mapper: *Mapper_2D) {}
 bounds_x :: inline (using graph: *Graph_2D_Line) -> float32, float32 {
     return min(x), max(x);
 }
@@ -113,24 +114,25 @@ fill :: (x: []float32, y1: []float32, y2: []float32 = .[], color: Color = RED) -
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Fill, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
-    mx  := map(x_mapper, x );
-    my1 := map(y_mapper, y1);
-    my2 := map(y_mapper, y2);
+draw :: (using graph: *Graph_2D_Fill, mapper: *Mapper_2D) {
+
+    m1 := map(mapper, x, y1);
+    m2 := map(mapper, x, y2);
     defer {
-        array_free(mx);
-        array_free(my1);
-        array_free(my2);
+        array_free(m1);
+        array_free(m2);
     }
 
-    zero := vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
+    zero := map(mapper, vec2());
 
     // create 1.1 * necessary points to account for probable zero-crossings
-    pts := NewResizableArray(cast(s32)(1.1*mx.count*2), Vector2, false);
+    N := x.count;
+    pts := NewResizableArray(cast(s32)(1.1*N*2), Vector2, false);
     defer array_free(pts);
 
-    for i: 0..mx.count-1 {
-        if i != mx.count-1 {
+    for i: 0..N-1 {
+
+        if i != N-1 {
             if (y2[i+1]-y1[i+1])*(y2[i]-y1[i]) < 0.0 {
 
                 // a1*x+b1 = a2*x+b2
@@ -141,32 +143,32 @@ draw :: (using graph: *Graph_2D_Fill, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D
                 _x := (y2[i]-y1[i])/(a1-a2);
                 _y := y1[i] + _x * a1;
 
-                extra := vec2(map(x_mapper, _x + x[i]), map(y_mapper, _y));
+                extra := map(mapper, vec2(_x+x[i], _y));
 
                 array_add(*pts,
-                    vec2(mx[i], min(my1[i], my2[i])),
-                    vec2(mx[i], max(my1[i], my2[i])),
+                    vec2(m1[i].x, min(m1[i].y, m2[i].y)),
+                    vec2(m1[i].x, max(m1[i].y, m2[i].y)),
                     extra,
                     extra
                 );
 
             } else {
                 array_add(*pts,
-                    vec2(mx[i], min(my1[i], my2[i])),
-                    vec2(mx[i], max(my1[i], my2[i])) 
+                    vec2(m1[i].x, min(m1[i].y, m2[i].y)),
+                    vec2(m1[i].x, max(m1[i].y, m2[i].y)) 
                 );
             }
         } else {
             array_add(*pts,
-                vec2(mx[i], min(my1[i], my2[i])),
-                vec2(mx[i], max(my1[i], my2[i])) 
+                vec2(m1[i].x, min(m1[i].y, m2[i].y)),
+                vec2(m1[i].x, max(m1[i].y, m2[i].y)) 
             );
         }
     }
 
     DrawTriangleStrip(pts, color);
 }
-update :: inline (using graph: *Graph_2D_Fill, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
+update :: inline (using graph: *Graph_2D_Fill, mapper: *Mapper_2D) {}
 bounds_x :: inline (using graph: *Graph_2D_Fill) -> float32, float32 {
     return min(x), max(x);
 }
@@ -219,20 +221,17 @@ symbols :: (x: []float32, y: []float32, symbol := Symbols.CIRCLE, color := RED, 
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
-    mx := map(x_mapper, x);
-    my := map(y_mapper, y);
-    defer {
-        array_free(mx);
-        array_free(my);
-    }
+draw :: (using graph: *Graph_2D_Symbols, mapper: *Mapper_2D) {
+    m := map(mapper, x, y);
+    defer array_free(m);
 
     tex := symbol_render_textures[symbol].texture;
+    s := vec2(size,size);
     for i: 0..x.count-1 {
-        DrawTextureEx(tex, vec2(mx[i],my[i]) - vec2(size,size), 0.0, size/(0.5*SYMBOL_SIZE), color);
+        DrawTextureEx(tex, m[i] - s, 0.0, size/(0.5*SYMBOL_SIZE), color);
     }
 }
-update :: (using graph: *Graph_2D_Symbols, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
+update :: (using graph: *Graph_2D_Symbols, mapper: *Mapper_2D) {
     if symbols_initialized then return;
 
     for *symbol_render_textures {
@@ -298,43 +297,39 @@ bars :: (x: []float32, y: []float32, color := SKYBLUE, bar_type: BarType = .SIMP
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Bars, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
-    mx := map(x_mapper, x);
-    my := map(y_mapper, y);
-    defer {
-        array_free(mx);
-        array_free(my);
-    }
-    zero := vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
+draw :: (using graph: *Graph_2D_Bars, mapper: *Mapper_2D) {
+    m := map(mapper, x, y);
+    defer array_free(m);
+    zero := map(mapper, vec2());
 
     if bar_type == {
         case .SIMPLE;
-            for i: 0..mx.count-2 {
+            for i: 0..m.count-2 {
                 DrawRectangleRec(
                     rectangle(
-                        min(mx[i], mx[i+1]),
-                        min(my[i], zero.y),
-                        Math.abs(mx[i]-mx[i+1]),
-                        Math.abs(my[i]-zero.y)
+                        min(m[i].x, m[i+1].x),
+                        min(m[i].y, zero.y),
+                        Math.abs(m[i].x-m[i+1].x),
+                        Math.abs(m[i].y-zero.y)
                     ), 
                     color
                 );
             }
         case .CONNECTED;
-            for i: 0..mx.count-2 {
+            for i: 0..m.count-2 {
                 DrawRectangleRec(
                     rectangle(
-                        min(mx[i], mx[i+1]),
-                        min(my[i], my[i+1]),
-                        Math.abs(mx[i]-mx[i+1]),
-                        Math.abs(my[i]-my[i+1])
+                        min(m[i].x, m[i+1].x),
+                        min(m[i].y, m[i+1].y),
+                        Math.abs(m[i].x-m[i+1].x),
+                        Math.abs(m[i].y-m[i+1].y)
                     ), 
                     color
                 );
             }
     }
 }
-update :: inline (using graph: *Graph_2D_Bars, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
+update :: inline (using graph: *Graph_2D_Bars, mapper: *Mapper_2D) {}
 bounds_x :: inline (using graph: *Graph_2D_Bars) -> float32, float32 {
     return min(x), max(x);
 }
@@ -379,38 +374,34 @@ error_bars :: (val: []float32, low: []float32, high: []float32, y_error := true,
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Error, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
-    mv, mlow, mhigh : []float32;
-    if y_error {
-        mv    = map(x_mapper, val);
-        mlow  = map(y_mapper, low);
-        mhigh = map(y_mapper, high);
-    } else {
-        mv    = map(y_mapper, val);
-        mlow  = map(x_mapper, low);
-        mhigh = map(x_mapper, high);
-    }
+draw :: (using graph: *Graph_2D_Error, mapper: *Mapper_2D) {
+
+    mlow  := map(mapper, val, low);
+    mhigh := map(mapper, val, high);
+
     defer {
-        array_free(mv   );
         array_free(mlow );
         array_free(mhigh);
     }
 
     if y_error {
+        shift := vec2(0.5*size, 0.0);
         for i: 0..val.count-1 {
-            DrawLineEx(vec2(mv[i], mhigh[i]), vec2(mv[i], mlow[i]), thickness, color);
-            DrawLineEx(vec2(mv[i]-0.5*size, mhigh[i]), vec2(mv[i]+0.5*size, mhigh[i]), thickness, color);
-            DrawLineEx(vec2(mv[i]-0.5*size,  mlow[i]), vec2(mv[i]+0.5*size,  mlow[i]), thickness, color);
+            DrawLineEx(mhigh[i], mlow[i], thickness, color);
+            DrawLineEx(mhigh[i] - shift, mhigh[i] + shift, thickness, color);
+            DrawLineEx(mlow[i]  - shift, mlow[i]  + shift, thickness, color);
         }
     } else {
+        shift := vec2(0.5*size, 0.0);
+        // shift := vec2(0.0, 0.5*size);
         for i: 0..val.count-1 {
-            DrawLineEx(vec2(mlow[i] , mv[i]         ), vec2(mhigh[i], mv[i]         ), thickness, color);
-            DrawLineEx(vec2(mlow[i] , mv[i]-0.5*size), vec2(mlow[i] , mv[i]+0.5*size), thickness, color);
-            DrawLineEx(vec2(mhigh[i], mv[i]-0.5*size), vec2(mhigh[i], mv[i]+0.5*size), thickness, color);
+            DrawLineEx(yx(mhigh[i]), yx(mlow[i]), thickness, color);
+            DrawLineEx(yx(mhigh[i] - shift), yx(mhigh[i] + shift), thickness, color);
+            DrawLineEx(yx(mlow[i]  - shift), yx(mlow[i]  + shift), thickness, color);
         }
     }
 }
-update :: inline (using graph: *Graph_2D_Error, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
+update :: inline (using graph: *Graph_2D_Error, mapper: *Mapper_2D) {}
 bounds_x :: inline (using graph: *Graph_2D_Error) -> float32, float32 {
     if y_error {
         return min(val), max(val);
@@ -446,6 +437,11 @@ Graph_2D_Boxes :: struct {
 }
 #scope_export
 boxes :: (x1: []float32, y1: []float32, x2: []float32 = .[], y2: []float32 = .[], color := SKYBLUE) -> *Graph_2D_Boxes {
+    
+    assert(x1.count == y1.count);
+    if x2.count != 0 then assert(x2.count == x1.count);
+    if y2.count != 0 then assert(y2.count == y1.count);
+
     res := New(Graph_2D_Boxes);
     res.type = Graph_2D_Boxes;
     res.color = color;
@@ -456,81 +452,66 @@ boxes :: (x1: []float32, y1: []float32, x2: []float32 = .[], y2: []float32 = .[]
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Boxes, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
+draw :: (using graph: *Graph_2D_Boxes, mapper: *Mapper_2D) {
     assert(x1.count != 0);
     assert(y1.count != 0);
     assert(x1.count == y1.count);
     if x2.count != 0 then assert(x2.count == x1.count);
     if y2.count != 0 then assert(y2.count == y1.count);
 
-    mx1 := map(x_mapper, x1);
-    mx2 := map(x_mapper, x2);
-    my1 := map(y_mapper, y1);
-    my2 := map(y_mapper, y2);
-    defer {
-        array_free(mx1);
-        array_free(mx2);
-        array_free(my1);
-        array_free(my2);
-    }
-    // zero := vec2(map(x_mapper, 0.0), map(y_mapper, 0.0));
+    N := x1.count;
+    tl := TempNewArray(N, Vector2, false);
+    tr := TempNewArray(N, Vector2, false);
+    bl := TempNewArray(N, Vector2, false);
+    br := TempNewArray(N, Vector2, false);
 
+    subone := 0;
 
-    if mx2.count == 0 {
-        if my2.count == 0 {
-            for i: 0..mx1.count-2 {
-                DrawRectangleRec(
-                    rectangle(
-                        min(mx1[i], mx1[i+1]),
-                        min(my1[i], my1[i+1]),
-                        Math.abs(mx1[i+1]-mx1[i]),
-                        Math.abs(my1[i+1]-my1[i])
-                    ), 
-                    color
-                );
-            }
+    if x2.count == 0 {
+        subone = 1;
+        if y2.count == 0 {
+
         } else {
-            for i: 0..mx1.count-2 {
-                DrawRectangleRec(
-                    rectangle(
-                        min(mx1[i], mx1[i+1]),
-                        min(my1[i], my2[i]),
-                        Math.abs(mx1[i+1]-mx1[i]),
-                        Math.abs(my2[i]-my1[i])
-                    ), 
-                    color
-                );
-            }
+
         }
     } else {
-        if my2.count == 0 {
-            for i: 0..mx1.count-2 {
-                DrawRectangleRec(
-                    rectangle(
-                        min(mx1[i],mx2[i]),
-                        min(my1[i], my1[i+1]),
-                        Math.abs(mx2[i]-mx1[i]),
-                        Math.abs(my1[i+1]-my1[i])
-                    ), 
-                    color
-                );
-            }
+        if y2.count == 0 {
+
         } else {
-            for i: 0..mx1.count-1 {
-                DrawRectangleRec(
-                    rectangle(
-                        min(mx1[i],mx2[i]),
-                        min(my1[i], my2[i]),
-                        Math.abs(mx2[i]-mx1[i]),
-                        Math.abs(my2[i]-my1[i])
-                    ), 
-                    color
-                );
+            for i:0..N-1 {
+                if x1[i] <= x2[i] {
+                    tl[i].x = x1[i];
+                    bl[i].x = x1[i];
+                    tr[i].x = x2[i];
+                    br[i].x = x2[i];
+                }
+                if y1[i] <= y2[i] {
+                    tl[i].y = y1[i];
+                    tr[i].y = y1[i];
+                    bl[i].y = y2[i];
+                    br[i].y = y2[i];
+                }
             }
         }
     }
+
+    
+    map(mapper, *tl);
+    map(mapper, *tr);
+    map(mapper, *bl);
+    map(mapper, *br);
+
+    box := TempNewArray(4, Vector2, false);
+    for i:0..N-1-subone {
+        box[0] = tl[i];
+        box[1] = bl[i];
+        box[2] = tr[i];
+        box[3] = br[i];
+        DrawTriangleStrip(box, color);
+    }
+
 }
-update :: inline (using graph: *Graph_2D_Boxes, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {}
+update :: inline (using graph: *Graph_2D_Boxes, mapper: *Mapper_2D) {}
 bounds_x :: inline (using graph: *Graph_2D_Boxes) -> float32, float32 {
     if x2.count == 0 then return min(x1), max(x1);
     return min(min(x1),min(x2)), max(max(x1),max(x2));
@@ -644,20 +625,17 @@ heatmap :: (rect: Rectangle, width: int, height: int, values: []float32, gradien
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
+draw :: (using graph: *Graph_2D_HeatMap, mapper: *Mapper_2D) {
     if values.count != width*height {
         DrawRectangleRec(rect, PURPLE);
     }
 
-    x0 := map(x_mapper, rect.x);
-    x1 := map(x_mapper, rect.x+rect.width);
-    y0 := map(y_mapper, rect.y);
-    y1 := map(y_mapper, rect.y+rect.height);
+    tl := map(mapper, top_left(rect));
+    size := map(mapper, bottom_right(rect)) - tl;
 
-    DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(x0,y1,x1-x0,-(y1-y0)), vec2(), 0.0, WHITE);
-    // DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(200,200,width,height), vec2(), 0.0, WHITE);
+    DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(tl.x,tl.y,size.x,-size.y), vec2(), 0.0, WHITE);
 }
-update :: inline (using graph: *Graph_2D_HeatMap, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
+update :: inline (using graph: *Graph_2D_HeatMap, mapper: *Mapper_2D) {
     if !texture_initialized {
         texture = LoadRenderTexture(cast(s32)width, cast(s32)height);
         texture_initialized = true;
@@ -712,14 +690,14 @@ multi :: (graphs2d: ..*Graph_2D) -> *Graph_2D_Multi {
     return res;
 }
 #scope_module
-draw :: (using graph: *Graph_2D_Multi, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
+draw :: (using graph: *Graph_2D_Multi, mapper: *Mapper_2D) {
     for graphs2d {
-        draw(it, x_mapper, y_mapper);
+        draw(it, mapper);
     }
 }
-update :: inline (using graph: *Graph_2D_Multi, x_mapper: *Mapper_1D, y_mapper: *Mapper_1D) {
+update :: inline (using graph: *Graph_2D_Multi, mapper: *Mapper_2D) {
     for graphs2d {
-        update(it, x_mapper, y_mapper);
+        update(it, mapper);
     }
 }
 bounds_x :: (using graph: *Graph_2D_Multi) -> float32, float32 {

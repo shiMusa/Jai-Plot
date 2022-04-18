@@ -6,6 +6,20 @@ NewResizableArray :: (count: s64, $T: Type, $initialized := true, allocator: All
     return res;
 }
 
+TempNewArray :: (count: s64, $T: Type, $initialized := true, allocator : Allocator = .{}, alignment: s32 = -1) -> []T #expand {
+    res := NewArray(count, T, initialized, allocator, alignment);
+    `defer array_free(res);
+    return res;
+}
+TempNewResizableArray :: (count: s64, $T: Type, $initialized := true, allocator : Allocator = .{}, alignment: s32 = -1) -> [..]T #expand {
+    res := NewResizableArray(count, T, initialized, allocator, alignment);
+    `defer array_free(res);
+    return res;
+}
+
+
+
+
 min :: (arr: []$T) -> T {
     assert(arr.count > 0);
     min := arr[0];

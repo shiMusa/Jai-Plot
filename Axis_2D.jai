@@ -334,8 +334,11 @@ on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
     }
 }
 update :: (using ax: *Axis_2D_Cartesian) {
+    m2d := mapper_2d_cartesian(x_mapper, y_mapper);
+    defer free(m2d);
+
     for graphs2d {
-        update(it, x_mapper, y_mapper);
+        update(it, m2d);
     }
 }
 draw :: (using ax: *Axis_2D_Cartesian) {
@@ -408,8 +411,13 @@ draw :: (using ax: *Axis_2D_Cartesian) {
     }
 
     if hide_overflow then BeginScissorMode(cast(s32)inner_rect.x, cast(s32)inner_rect.y, cast(s32)inner_rect.width, cast(s32)inner_rect.height);
-    for graphs2d {
-        draw(it, x_mapper, y_mapper);
+    {
+        m2d := mapper_2d_cartesian(x_mapper, y_mapper);
+        defer free(m2d);
+
+        for graphs2d {
+            draw(it, m2d);
+        }
     }
     if hide_overflow then EndScissorMode();
 
@@ -598,6 +606,11 @@ draw :: (using ax: *Axis_2D_Cartesian) {
 
 Axis_2D_Polar :: struct {
     using _axis: Axis_2D;
+    inner_rect: Rectangle;
+    padding_top   : float32 = 20.0;
+    padding_bottom: float32 = 20.0;
+    padding_left  : float32 = 20.0;
+    padding_right : float32 = 20.0;
 
     mapper_angle : *Mapper_1D_Linear;
 
@@ -611,7 +624,8 @@ Axis_2D_Polar :: struct {
     mapper_pixel_x : *Mapper_1D_Linear; // map to pixel position x 
     mapper_pixel_y : *Mapper_1D_Linear; // map to pixel position y
 
-    show_frame : bool = true;
+    show_frame     : bool = true;
+    show_quadrants : bool = true;
 }
 #scope_export
 axis_2d_polar :: (mapper_radius: *Mapper_1D = null) -> *Axis_2D_Polar {
@@ -637,15 +651,25 @@ intersection_axis :: (b: *Axis_2D_Polar, pos: Vector2) -> bool {
     return false;
 }
 draw :: (using b: *Axis_2D_Polar) {
-    print("drawing %\n", axis_rectangle);
     if show_frame {
-        r := min(axis_rectangle.width, axis_rectangle.height)*0.5;
-        DrawCircleJai(center(axis_rectangle), r, BLACK, 2.0, 128);
+        r := min(inner_rect.width, inner_rect.height)*0.5;
+        c := center(inner_rect);
+        DrawCircleJai(c, r, BLACK, 2.0, 180);
+    }
+    if show_quadrants {
+        r := min(inner_rect.width, inner_rect.height)*0.5;
+        c  := center(       inner_rect);
+        ct := center_top(   inner_rect);
+        cb := center_bottom(inner_rect);
+        cl := center_left(  inner_rect);
+        cr := center_right( inner_rect);
+        DrawLineEx(c-vec2(r,0), c+vec2(r,0), 2.0, BLACK);
+        DrawLineEx(c-vec2(0,r), c+vec2(0,r), 2.0, BLACK);
     }
 }
 update :: (using b: *Axis_2D_Polar) {
     for graphs2d {
-        update(it, mapper_angle, mapper_radius);
+        update(it, mapper_polar);
     }
 }
 reset :: (b: *Axis_2D_Polar) {
@@ -654,6 +678,11 @@ zoom :: (b: *Axis_2D_Polar, position: Vector2, wheel: float32) {
 }
 fit_into_rectangle :: (using b: *Axis_2D_Polar, rectangle: Rectangle) {
     axis_rectangle = rectangle;
+    inner_rect = axis_rectangle;
+    inner_rect.x += padding_left;
+    inner_rect.y += padding_top;
+    inner_rect.width  -= padding_left+padding_right;
+    inner_rect.height -= padding_top+padding_bottom;
 }
 fit_data :: (b: *Axis_2D_Polar, overwrite_constraints: bool = false) {
 }

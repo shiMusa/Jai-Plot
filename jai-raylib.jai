@@ -138,22 +138,31 @@ right :: inline (r: Rectangle) -> float32 {
 bottom :: inline (r: Rectangle) -> float32 {
     return r.y + r.height;
 }
-center :: (r: Rectangle) -> Vector2 {
-    return vec2(center_x(r), center_y(r));
+top_left :: inline (r: Rectangle) -> Vector2 {
+    return vec2(r.x, r.y);
+}
+top_right :: inline (r: Rectangle) -> Vector2 {
+    return vec2(r.x+r.width, r.y);
+}
+bottom_left :: inline (r: Rectangle) -> Vector2 {
+    return vec2(r.x, r.y+r.height);
 }
 bottom_right :: inline (r: Rectangle) -> Vector2 {
     return vec2(r.x + r.width, r.y + r.height);
 }
+center :: (r: Rectangle) -> Vector2 {
+    return vec2(center_x(r), center_y(r));
+}
 center_top :: inline (r: Rectangle) -> Vector2 {
     return vec2(center_x(r), r.y);
 }
-center_bottom :: inline (r: Rectangle) -> float32 {
+center_bottom :: inline (r: Rectangle) -> Vector2 {
     return vec2(center_x(r), r.y+r.height);
 }
-center_left :: inline (r: Rectangle) -> float32 {
+center_left :: inline (r: Rectangle) -> Vector2 {
     return vec2(r.x, center_y(r));
 }
-center_right :: inline (r: Rectangle) -> float32 {
+center_right :: inline (r: Rectangle) -> Vector2 {
     return vec2(r.x+r.width, center_y(r));
 }
 fit_into_rectangle :: (r: *Rectangle, rectangle: Rectangle, padding := Vector4.{0.0,0.0,0.0,0.0}) {
@@ -173,6 +182,10 @@ vec2 :: (x:float=0.0, y:float=0.0) -> Vector2 {
     res.y = y;
     return res;
 }
+yx :: inline (v: Vector2) -> Vector2 {
+    return vec2(v.y, v.x);
+}
+
 vec3 :: (x:float=0.0, y:float=0.0, z:float=0.0) -> Vector3 {
     res : Vector3 = ---;
     res.x = x;
