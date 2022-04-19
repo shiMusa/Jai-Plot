@@ -35,7 +35,6 @@ plot2d :: (ax: *Axis_2D, graph2d: *Graph_2D) {
 
 
 
-
 intersection_axis :: (b: *Axis_2D, pos: Vector2) -> bool {
     #insert #run specialize(Axis_2D_Types, "intersection_axis", .["pos"], 1);
 }
@@ -54,53 +53,12 @@ zoom :: (b: *Axis_2D, position: Vector2, wheel: float32) {
 fit_into_rectangle :: (b: *Axis_2D, rectangle: Rectangle) {
     #insert #run specialize(Axis_2D_Types, "fit_into_rectangle", .["rectangle"]);
 }
-fit_data :: (b: *Axis_2D, overwrite_constraints: bool = false) {
-    #insert #run specialize(Axis_2D_Types, "fit_data", .["overwrite_constraints"]);
-}
-fit_bounds :: (b: *Axis_2D, gui_rect: Rectangle, overwrite_constraints : bool = false) {
-    #insert #run specialize(Axis_2D_Types, "fit_bounds", .["gui_rect", "overwrite_constraints"]);
-}
+
 mouse_dragging :: (b: *Axis_2D) -> *MouseState_Dragging {
     #insert #run specialize(Axis_2D_Types, "mouse_dragging", .[], 1);
 }
 mouse_rmb_dragging :: (b: *Axis_2D) -> *MouseState_RMB_Dragging {
     #insert #run specialize(Axis_2D_Types, "mouse_rmb_dragging", .[], 1);
-}
-bounds_x :: (using ax: *Axis_2D) -> float32, float32 {
-    assert(graphs2d.count > 0);
-    _min, _max := bounds_x(graphs2d[0]);
-    for i:1..graphs2d.count-1 {
-        mi, ma := bounds_x(graphs2d[i]);
-        _min = min(_min, mi);
-        _max = max(_max, ma);
-    }
-    return _min, _max;
-}
-bounds_y :: (using ax: *Axis_2D) -> float32, float32 {
-    assert(graphs2d.count > 0);
-    _min, _max := bounds_y(graphs2d[0]);
-    for i:1..graphs2d.count-1 {
-        mi, ma := bounds_y(graphs2d[i]);
-        _min = min(_min, mi);
-        _max = max(_max, ma);
-    }
-    return _min, _max;
-}
-bounds_extra :: (using ax: *Axis_2D, index: int) -> float32, float32 {
-    assert(graphs2d.count > 0);
-
-    _min := Math.FLOAT32_MAX;
-    _max := Math.FLOAT32_MIN;
-
-    for graphs2d {
-        if it.extra.count > index {
-            mi,ma := bounds_extra(it, index);
-            _min = min(_min, mi);
-            _max = max(_max, ma);
-        }
-    }
-
-    return _min, _max;
 }
 
 
@@ -283,6 +241,26 @@ fit_bounds :: (using ax: *Axis_2D_Cartesian, gui_rect: Rectangle, overwrite_cons
     using inner_rect;
     fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
     fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
+}
+bounds_x :: (using ax: *Axis_2D_Cartesian) -> float32, float32 {
+    assert(graphs2d.count > 0);
+    _min, _max := bounds_x(graphs2d[0]);
+    for i:1..graphs2d.count-1 {
+        mi, ma := bounds_x(graphs2d[i]);
+        _min = min(_min, mi);
+        _max = max(_max, ma);
+    }
+    return _min, _max;
+}
+bounds_y :: (using ax: *Axis_2D_Cartesian) -> float32, float32 {
+    assert(graphs2d.count > 0);
+    _min, _max := bounds_y(graphs2d[0]);
+    for i:1..graphs2d.count-1 {
+        mi, ma := bounds_y(graphs2d[i]);
+        _min = min(_min, mi);
+        _max = max(_max, ma);
+    }
+    return _min, _max;
 }
 fit_data :: (using ax: *Axis_2D_Cartesian, overwrite_constraints: bool = false) {
     if graphs2d.count == 0 then return;
@@ -627,7 +605,7 @@ axis_2d_polar :: (mapper_radius: *Mapper_1D = null, mapper_angle: *Mapper_1D = n
     res.mapper_pixel_x = mapper_1d_linear();
     res.mapper_pixel_y = mapper_1d_linear();
     res.mapper = mapper_2d_multi(
-        mapper_2d_cartesian(res.mapper_radius, res.mapper_angle),
+        mapper_2d_cartesian(res.mapper_angle, res.mapper_radius),
         res.mapper_polar,
         mapper_2d_cartesian(res.mapper_pixel_x, res.mapper_pixel_y)
     );
@@ -638,10 +616,16 @@ axis_2d_polar :: (mapper_radius: *Mapper_1D = null, mapper_angle: *Mapper_1D = n
 }
 
 #scope_module
-intersection_axis :: (b: *Axis_2D_Polar, pos: Vector2) -> bool {
-    return false;
+intersection_axis :: (using axis: *Axis_2D_Polar, pos: Vector2) -> bool {
+    return CheckCollisionPointRec(pos, inner_rect);
 }
-draw :: (using b: *Axis_2D_Polar) {
+draw :: (using axis: *Axis_2D_Polar) {
+    fit_data(axis);
+
+    for graphs2d {
+        draw(it, axis);
+    }
+
     if show_frame {
         r := min(inner_rect.width, inner_rect.height)*0.5;
         c := center(inner_rect);
@@ -663,11 +647,11 @@ update :: (using axis: *Axis_2D_Polar) {
         update(it);
     }
 }
-reset :: (b: *Axis_2D_Polar) {
+reset :: (axis: *Axis_2D_Polar) {
 }
-zoom :: (b: *Axis_2D_Polar, position: Vector2, wheel: float32) {
+zoom :: (axis: *Axis_2D_Polar, position: Vector2, wheel: float32) {
 }
-fit_into_rectangle :: (using b: *Axis_2D_Polar, rectangle: Rectangle) {
+fit_into_rectangle :: (using axis: *Axis_2D_Polar, rectangle: Rectangle) {
     axis_rectangle = rectangle;
     inner_rect = axis_rectangle;
     inner_rect.x += padding_left;
@@ -675,13 +659,21 @@ fit_into_rectangle :: (using b: *Axis_2D_Polar, rectangle: Rectangle) {
     inner_rect.width  -= padding_left+padding_right;
     inner_rect.height -= padding_top+padding_bottom;
 }
-fit_data :: (b: *Axis_2D_Polar, overwrite_constraints: bool = false) {
+fit_data :: (using axis: *Axis_2D_Polar, overwrite_constraints: bool = false) {
+    using inner_rect;
+    s := min(width, height)*0.5;
+    c := center(inner_rect);
+    fit_bounds(mapper_pixel_x, -1.0, 1.0, c.x-s, c.x+s, overwrite_constraints);
+    fit_bounds(mapper_pixel_y, -1.0, 1.0, c.y-s, c.y+s, overwrite_constraints);
 }
-fit_bounds :: (b: *Axis_2D_Polar, gui_rect: Rectangle, overwrite_constraints : bool = false) {
+fit_bounds :: (using axis: *Axis_2D_Polar, gui_rect: Rectangle, overwrite_constraints : bool = false) {
+    using inner_rect;
+    fit_bounds(mapper_pixel_x, -1.0, 1.0, x, x+width , overwrite_constraints);
+    fit_bounds(mapper_pixel_y, -1.0, 1.0, y, y+height, overwrite_constraints);
 }
-mouse_dragging :: (b: *Axis_2D_Polar) -> *MouseState_Dragging {
+mouse_dragging :: (axis: *Axis_2D_Polar) -> *MouseState_Dragging {
     assert(false, "not yet implemented\n");
 }
-mouse_rmb_dragging :: (b: *Axis_2D_Polar) -> *MouseState_RMB_Dragging {
+mouse_rmb_dragging :: (axis: *Axis_2D_Polar) -> *MouseState_RMB_Dragging {
     assert(false, "not yet implemented\n");
 }

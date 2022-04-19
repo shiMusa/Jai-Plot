@@ -199,15 +199,16 @@ main :: () {
     {
         add_page(page_single(axis_2d_polar(), "polar map"));
 
-        angle  := NewArray(33, float32);
-        radius := NewArray(33, float32);
-        for i:0..32 {
-            angle[i]  = cast(float32)i/32 * 2.0 * PI32;
-            tmp := Math.cos(angle[i]);
+        N := 360*2+1;
+        angle  := NewArray(N, float32);
+        radius := NewArray(N, float32);
+        for i:0..N-1 {
+            angle[i]  = cast(float32)i/(N-1) * 2.0 * PI32;
+            tmp := Math.cos(angle[i]*7.0/2.0);
             radius[i] = tmp*tmp;
         }
 
-        plot2d(line(angle,radius));
+        plot2d(line(angle, radius));
     }
 
     simulation();

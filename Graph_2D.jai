@@ -88,7 +88,7 @@ draw :: (using graph: *Graph_2D_Line, axis: *Axis_2D_Cartesian) {
 draw :: (using graph: *Graph_2D_Line, axis: *Axis_2D_Polar) {
     m := map(axis.mapper, x, y);
     defer array_free(m);
-    
+
     DrawLines(m, color, thickness);
 }
 
@@ -181,6 +181,9 @@ draw :: (using graph: *Graph_2D_Fill, axis: *Axis_2D_Cartesian) {
 
     DrawTriangleStrip(pts, color);
 }
+draw :: (using graph: *Graph_2D_Fill, axis: *Axis_2D_Polar) {
+    assert(false, "not yet implemented\n");
+}
 update :: inline (using graph: *Graph_2D_Fill) {}
 bounds_x :: inline (using graph: *Graph_2D_Fill) -> float32, float32 {
     return min(x), max(x);
@@ -249,6 +252,9 @@ draw :: (using graph: *Graph_2D_Symbols, axis: *Axis_2D_Cartesian) {
     for i: 0..x.count-1 {
         DrawTextureEx(tex, vec2(mx[i],my[i]) - vec2(size,size), 0.0, size/(0.5*SYMBOL_SIZE), color);
     }
+}
+draw :: (using graph: *Graph_2D_Symbols, axis: *Axis_2D_Polar) {
+    assert(false, "not yet implemented\n");
 }
 update :: (using graph: *Graph_2D_Symbols) {
     if symbols_initialized then return;
@@ -355,6 +361,9 @@ draw :: (using graph: *Graph_2D_Bars, axis: *Axis_2D_Cartesian) {
             }
     }
 }
+draw :: (using graph: *Graph_2D_Bars, axis: *Axis_2D_Polar) {
+    assert(false, "not yet implemented\n");
+}
 update :: inline (using graph: *Graph_2D_Bars) {}
 bounds_x :: inline (using graph: *Graph_2D_Bars) -> float32, float32 {
     return min(x), max(x);
@@ -427,6 +436,9 @@ draw :: (using graph: *Graph_2D_Error, axis: *Axis_2D_Cartesian) {
             DrawLineEx(vec2(mhigh[i], mv[i]-0.5*size), vec2(mhigh[i], mv[i]+0.5*size), thickness, color);
         }
     }
+}
+draw :: (using graph: *Graph_2D_Error, axis: *Axis_2D_Polar) {
+    assert(false, "not yet implemented\n");
 }
 update :: inline (using graph: *Graph_2D_Error) {}
 bounds_x :: inline (using graph: *Graph_2D_Error) -> float32, float32 {
@@ -557,6 +569,9 @@ draw :: (using graph: *Graph_2D_Boxes, axis: *Axis_2D_Cartesian) {
     }
 
 }
+draw :: (using graph: *Graph_2D_Boxes, axis: *Axis_2D_Polar) {
+    assert(false, "not yet implemented\n");
+}
 update :: inline (using graph: *Graph_2D_Boxes) {}
 bounds_x :: inline (using graph: *Graph_2D_Boxes) -> float32, float32 {
     if x2.count == 0 then return min(x1), max(x1);
@@ -686,6 +701,9 @@ draw :: (using graph: *Graph_2D_HeatMap, axis: *Axis_2D_Cartesian) {
 
     DrawTexturePro(texture.texture, rectangle(0,0,width,height), rectangle(x0,y1,x1-x0,-(y1-y0)), vec2(), 0.0, WHITE);
 }
+draw :: (using graph: *Graph_2D_HeatMap, axis: *Axis_2D_Polar) {
+    assert(false, "not yet implemented\n");
+}
 update :: inline (using graph: *Graph_2D_HeatMap) {
     if !texture_initialized {
         texture = LoadRenderTexture(cast(s32)width, cast(s32)height);
@@ -745,6 +763,9 @@ draw :: (using graph: *Graph_2D_Multi, axis: *Axis_2D) {
     for graphs2d {
         draw(it, axis);
     }
+}
+draw :: (using graph: *Graph_2D_Multi, axis: *Axis_2D_Polar) {
+    assert(false, "not yet implemented\n");
 }
 update :: inline (using graph: *Graph_2D_Multi) {
     for graphs2d {

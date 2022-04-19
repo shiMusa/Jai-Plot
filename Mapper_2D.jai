@@ -212,14 +212,14 @@ clone :: (using cm: *Mapper_2D_Multi) -> *Mapper_2D_Multi {
 }
 // angle, radius
 map :: (using b: *Mapper_2D_Multi, p: Vector2) -> Vector2 {
-    res : Vector2;
+    res := p;
     for mappers {
         res = map(it, res);
     }
     return res;
 }
 map_inv :: (b: *Mapper_2D_Multi, p: Vector2) -> Vector2 {
-    res : Vector2;
+    res := p;
     for i:0..mappers.count-1 {
         j := mappers.count-1-i;
         res = map_inv(mappers[j], res);
