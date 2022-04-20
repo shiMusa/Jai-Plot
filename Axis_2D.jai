@@ -592,8 +592,10 @@ Axis_2D_Polar :: struct {
     mapper_pixel_x : *Mapper_1D_Linear; // map to pixel position x 
     mapper_pixel_y : *Mapper_1D_Linear; // map to pixel position y
 
+    show_overflow  : bool = false;
     show_frame     : bool = true;
     show_quadrants : bool = true;
+    show_grid      : bool = true;
 }
 #scope_export
 axis_2d_polar :: (mapper_radius: *Mapper_1D = null, mapper_angle: *Mapper_1D = null) -> *Axis_2D_Polar {
@@ -621,25 +623,51 @@ intersection_axis :: (using axis: *Axis_2D_Polar, pos: Vector2) -> bool {
 }
 draw :: (using axis: *Axis_2D_Polar) {
     fit_data(axis);
+    zero := vec2(map(mapper_pixel_x, 0.0), map(mapper_pixel_y, 0.0));
 
+    if !show_overflow then 
+        BeginScissorMode(cast(s32)inner_rect.x, cast(s32)inner_rect.y, cast(s32)inner_rect.width, cast(s32)inner_rect.height);
+    
+    if show_grid {
+        r := 0.5 * Math.sqrt(inner_rect.width*inner_rect.width + inner_rect.height*inner_rect.height);
+        for i:0..24-1 {
+            angle := cast(float32)i/24.0 * 2.0 * PI32;
+            DrawLineEx(zero, zero + r * vec2(Math.cos(angle), Math.sin(angle)), 1.5, LIGHTGRAY);
+        }
+
+        tl := vec2(inner_rect.x, inner_rect.y);
+        tl = vec2(map_inv(mapper_pixel_x, tl.x), map_inv(mapper_pixel_y, tl.y));
+        tl = map_inv(mapper_polar, tl); // {angle, radius}
+        r = tl.y;
+
+        ticks := ticks_linear(0.0, r);
+        points := TempNewArray(361, Vector2, false);
+        for i:0..360 {
+            angle := cast(float32)i/360.0 * 2.0 * PI32;
+            points[i] = vec2(Math.cos(angle), Math.sin(angle));
+        }
+        for ticks {
+            for i:0..361-1-1 {
+                p1 := map(mapper.mappers[2], it * points[i  ]);
+                p2 := map(mapper.mappers[2], it * points[i+1]);
+                DrawLineEx(p1, p2, 1.5, LIGHTGRAY);
+            }
+        }
+    }
+    
     for graphs2d {
         draw(it, axis);
     }
 
+    if !show_overflow then EndScissorMode();
+
     if show_frame {
-        r := min(inner_rect.width, inner_rect.height)*0.5;
-        c := center(inner_rect);
-        DrawCircleJai(c, r, BLACK, 2.0, 180);
+        DrawRectangleLinesEx(inner_rect, 2.0, BLACK);
     }
     if show_quadrants {
-        r := min(inner_rect.width, inner_rect.height)*0.5;
-        c  := center(       inner_rect);
-        ct := center_top(   inner_rect);
-        cb := center_bottom(inner_rect);
-        cl := center_left(  inner_rect);
-        cr := center_right( inner_rect);
-        DrawLineEx(c-vec2(r,0), c+vec2(r,0), 2.0, BLACK);
-        DrawLineEx(c-vec2(0,r), c+vec2(0,r), 2.0, BLACK);
+        using inner_rect;
+        DrawLineEx(vec2(x,zero.y), vec2(x+width, zero.y), 2.0, BLACK);
+        DrawLineEx(vec2(zero.x, y), vec2(zero.x, y+height), 2.0, BLACK);
     }
 }
 update :: (using axis: *Axis_2D_Polar) {
@@ -664,12 +692,7 @@ fit_data :: (using axis: *Axis_2D_Polar, overwrite_constraints: bool = false) {
     s := min(width, height)*0.5;
     c := center(inner_rect);
     fit_bounds(mapper_pixel_x, -1.0, 1.0, c.x-s, c.x+s, overwrite_constraints);
-    fit_bounds(mapper_pixel_y, -1.0, 1.0, c.y-s, c.y+s, overwrite_constraints);
-}
-fit_bounds :: (using axis: *Axis_2D_Polar, gui_rect: Rectangle, overwrite_constraints : bool = false) {
-    using inner_rect;
-    fit_bounds(mapper_pixel_x, -1.0, 1.0, x, x+width , overwrite_constraints);
-    fit_bounds(mapper_pixel_y, -1.0, 1.0, y, y+height, overwrite_constraints);
+    fit_bounds(mapper_pixel_y, 1.0, -1.0, c.y-s, c.y+s, overwrite_constraints); // flip_y
 }
 mouse_dragging :: (axis: *Axis_2D_Polar) -> *MouseState_Dragging {
     assert(false, "not yet implemented\n");

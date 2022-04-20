@@ -203,8 +203,8 @@ main :: () {
         angle  := NewArray(N, float32);
         radius := NewArray(N, float32);
         for i:0..N-1 {
-            angle[i]  = cast(float32)i/(N-1) * 2.0 * PI32;
-            tmp := Math.cos(angle[i]*7.0/2.0);
+            angle[i]  = cast(float32)i/(N-1) * 2.0 * PI32 * 2.125;
+            tmp := Math.cos(angle[i] * 2.65);
             radius[i] = tmp*tmp;
         }
 
