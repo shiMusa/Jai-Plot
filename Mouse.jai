@@ -53,11 +53,11 @@ on_event :: (using mouse: *MouseState_Free, event: *Event) {
             if e.axis_event_type == {
                 case .MOVE;
                     mouse_stop_free(mouse);
-                    _mouse = cast(*MouseState)mouse_dragging(e.axis);
+                    _mouse = cast(*MouseState)mouse_dragging();
                     free(mouse);
                 case .RECT_ZOOM;
                     mouse_stop_free(mouse);
-                    _mouse = cast(*MouseState)mouse_rmb_dragging(e.axis);
+                    _mouse = cast(*MouseState)mouse_rmb_dragging();
                     free(mouse);
             }
     }
@@ -68,9 +68,7 @@ on_event :: (using mouse: *MouseState_Free, event: *Event) {
 MouseState_Dragging :: struct {
     using mouse_state: MouseState;
 }
-mouse_dragging :: (using axis: *Axis_2D_Cartesian) -> *MouseState_Dragging {
-    using inner_rect;
-
+mouse_dragging :: () -> *MouseState_Dragging {
     res := New(MouseState_Dragging);
     res.type = MouseState_Dragging;
     res.x = cast(float32)GetMouseX();
@@ -107,7 +105,7 @@ mouse_stop_dragging :: (using mouse: *MouseState_Dragging) {
 MouseState_RMB_Dragging :: struct {
     using mouse_state: MouseState;
 }
-mouse_rmb_dragging :: (axis: *Axis_2D_Cartesian) -> *MouseState_RMB_Dragging {
+mouse_rmb_dragging :: () -> *MouseState_RMB_Dragging {
     res := New(MouseState_RMB_Dragging);
     res.type = MouseState_RMB_Dragging;
     subscribe(_broadcaster, res, on_event);

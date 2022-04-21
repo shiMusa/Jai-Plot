@@ -34,31 +34,14 @@ plot2d :: (ax: *Axis_2D, graph2d: *Graph_2D) {
 #scope_module
 
 
-
-intersection_axis :: (b: *Axis_2D, pos: Vector2) -> bool {
-    #insert #run specialize(Axis_2D_Types, "intersection_axis", .["pos"], 1);
-}
 draw :: (b: *Axis_2D) {
     #insert #run specialize(Axis_2D_Types, "draw");
 }
 update :: (b: *Axis_2D) {
     #insert #run specialize(Axis_2D_Types, "update");
 }
-reset :: (b: *Axis_2D) {
-    #insert #run specialize(Axis_2D_Types, "reset");
-}
-zoom :: (b: *Axis_2D, position: Vector2, wheel: float32) {
-    #insert #run specialize(Axis_2D_Types, "zoom", .["position", "wheel"]);
-}
 fit_into_rectangle :: (b: *Axis_2D, rectangle: Rectangle) {
     #insert #run specialize(Axis_2D_Types, "fit_into_rectangle", .["rectangle"]);
-}
-
-mouse_dragging :: (b: *Axis_2D) -> *MouseState_Dragging {
-    #insert #run specialize(Axis_2D_Types, "mouse_dragging", .[], 1);
-}
-mouse_rmb_dragging :: (b: *Axis_2D) -> *MouseState_RMB_Dragging {
-    #insert #run specialize(Axis_2D_Types, "mouse_rmb_dragging", .[], 1);
 }
 
 
@@ -156,211 +139,10 @@ axis_2d_cartesian :: (x_mapper: *Mapper_1D = null, y_mapper: *Mapper_1D = null, 
     return res;
 }
 #scope_module
-reset :: (axis: *Axis_2D_Cartesian) {
-    xm := axis.x_mapper;
-    ym := axis.y_mapper;
-    defer {
-        free(xm);
-        free(ym);
-    }
-    axis.x_mapper = clone(axis.original_x_mapper);
-    axis.y_mapper = clone(axis.original_y_mapper);
-}
-intersection_axis :: inline (axis: *Axis_2D_Cartesian, pos: Vector2) -> bool {
-    return CheckCollisionPointRec(pos, axis.inner_rect);
-}
-zoom :: (using axis: *Axis_2D_Cartesian, mouse: Vector2, wheel: float32) {
-    using inner_rect;
-    
-    delta := 0.02 * wheel;
 
-    xmin := map_inv(x_mapper, (mouse.x - x)          * delta + x        );
-    xmax := map_inv(x_mapper, (mouse.x - (x+width )) * delta + x+width  );
-    ymin := map_inv(y_mapper, (mouse.y - y)          * delta + y        );
-    ymax := map_inv(y_mapper, (mouse.y - (y+height)) * delta + y+height );
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    fit_bounds(x_mapper, xmin, xmax, x, x + width , true);
-    fit_bounds(y_mapper, ymin, ymax, y, y + height, true);
-}
-equal_scaling :: (using axis: *Axis_2D_Cartesian) {
-    using inner_rect;
-
-    xm := x_mapper;
-    ym := y_mapper;
-    defer {
-        free(xm);
-        free(ym);
-    }
-
-    x0 := map_inv(x_mapper, x + 0.5*width );
-    y0 := map_inv(y_mapper, y + 0.5*height);
-
-    xmin, xmax, ymin, ymax : float32;
-    if width < height {   // portrait
-        xmin = map_inv(x_mapper, x);
-        xmax = map_inv(x_mapper, x + width);
-        dxdp := (xmax-xmin)/width;
-        if flip_y then dxdp = -dxdp;
-        ymin = -dxdp*height*0.5 + y0;
-        ymax =  dxdp*height*0.5 + y0;
-    } else {                           // landscape
-        ymin = map_inv(y_mapper, y);
-        ymax = map_inv(y_mapper, y + height);
-        dydp := (ymax-ymin)/height;
-        if flip_y then dydp *= -1.0;
-        xmin = -dydp*width*0.5 + x0;
-        xmax =  dydp*width*0.5 + x0;
-    }
-
-    x_mapper = mapper_1d_constraint(
-        mapper_1d_linear(), 
-        xmin, 
-        xmax, 
-        x, 
-        x + width
-    );
-    y_mapper = mapper_1d_constraint(
-        mapper_1d_linear(), 
-        ymin, 
-        ymax, 
-        y         , //ifx flip_y then y          else y + height, 
-        y + height  //ifx flip_y then y + height else y
-    );
-}
-fit_into_rectangle :: (using ax: *Axis_2D_Cartesian, r: Rectangle) {
-    axis_rectangle = r;
-
-    left_padding   := y_label_padding;
-    bottom_padding := x_label_padding;
-
-    inner_rect.x = r.x + axis_padding.x + left_padding;
-    inner_rect.y = r.y + axis_padding.y + title_padding ;
-    inner_rect.width  = r.width  - (axis_padding.x + axis_padding.z + left_padding);
-    inner_rect.height = r.height - (axis_padding.y + axis_padding.w + title_padding + bottom_padding);
-}
-fit_bounds :: (using ax: *Axis_2D_Cartesian, gui_rect: Rectangle, overwrite_constraints : bool = false) {
-    min_x := map_inv(x_mapper, gui_rect.x);
-    max_x := map_inv(x_mapper, gui_rect.x+gui_rect.width);
-    min_y := map_inv(y_mapper, gui_rect.y);
-    max_y := map_inv(y_mapper, gui_rect.y+gui_rect.height);
-
-    using inner_rect;
-    fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
-    fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
-}
-bounds_x :: (using ax: *Axis_2D_Cartesian) -> float32, float32 {
-    assert(graphs2d.count > 0);
-    _min, _max := bounds_x(graphs2d[0]);
-    for i:1..graphs2d.count-1 {
-        mi, ma := bounds_x(graphs2d[i]);
-        _min = min(_min, mi);
-        _max = max(_max, ma);
-    }
-    return _min, _max;
-}
-bounds_y :: (using ax: *Axis_2D_Cartesian) -> float32, float32 {
-    assert(graphs2d.count > 0);
-    _min, _max := bounds_y(graphs2d[0]);
-    for i:1..graphs2d.count-1 {
-        mi, ma := bounds_y(graphs2d[i]);
-        _min = min(_min, mi);
-        _max = max(_max, ma);
-    }
-    return _min, _max;
-}
-fit_data :: (using ax: *Axis_2D_Cartesian, overwrite_constraints: bool = false) {
-    if graphs2d.count == 0 then return;
-
-    min_x, max_x := bounds_x(ax);
-    min_y, max_y := bounds_y(ax);
-
-    using inner_rect;
-    fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
-    if !flip_y {
-        fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
-    } else {
-        fit_bounds(y_mapper, min_y, max_y, y+height, y, overwrite_constraints);
-    }
-}
-on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
-    if !ax.activated then return;
-
-    if event.type == {
-        case Event_Button;
-            e := cast(*Event_Button)event;
-            if e.button_event_type != .PRESSED then return;
-
-            if e.button == ax.button_reset         then reset(ax);
-            if e.button == ax.button_equal_scaling then equal_scaling(ax);
-            if e.button == ax.button_fit           then fit_data(ax, true);
-            if e.button == ax.button_grid          then ax.show_grid = !ax.show_grid;
-
-        case Event_Mouse_Button;
-            e := cast(*Event_Mouse_Button)event;
-
-            is_over_reset := is_over(ax.button_reset        , e.position);
-            is_over_eq_sc := is_over(ax.button_equal_scaling, e.position);
-            is_over_fit   := is_over(ax.button_fit          , e.position);
-            if is_over_reset || is_over_eq_sc || is_over_fit then return;
-
-            if e.button == 0 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
-                // start dragging
-                using ax;
-                mx := ifx x_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)x_mapper).inner else x_mapper;
-                my := ifx y_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)y_mapper).inner else y_mapper;
-                drag_old_pos.x = map_inv(mx, cast(float32)e.x);
-                drag_old_pos.y = map_inv(my, cast(float32)e.y);
-
-                using inner_rect;
-                x_mapper = mapper_1d_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
-                y_mapper = mapper_1d_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
-
-                broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .MOVE));
-            }
-            if e.button == 1 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
-                // start dragging
-                using ax;
-                drag_old_pos = e.position;
-                drag_pos     = e.position;
-                is_rmb_dragging = true;
-
-                broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .RECT_ZOOM));
-            }
-        case Event_Mouse_Drag;
-            e := cast(*Event_Mouse_Drag)event;
-            ax.drag_pos = e.position;
-            if e.button == 0 {
-                if e.active {
-                    using ax;
-                    mx := cast(*Mapper_1D_Constraint)x_mapper;
-                    my := cast(*Mapper_1D_Constraint)y_mapper;
-                    match(mx, drag_old_pos.x, e.x);
-                    match(my, drag_old_pos.y, e.y);
-                }
-            }
-            if e.button == 1 {
-                if !e.active {
-                    using ax;
-                    using e.position;
-
-                    fit_bounds(ax, rectangle(
-                        min(drag_old_pos.x, x),
-                        min(drag_old_pos.y, y),
-                        Math.abs(drag_old_pos.x-x),
-                        Math.abs(drag_old_pos.y-y)
-                    ), true);
-
-                    is_rmb_dragging = false;
-                }
-            }
-        case Event_Mouse_Wheel;
-            e := cast(*Event_Mouse_Wheel)event;
-
-            if e.wheel != 0.0 && CheckCollisionPointRec(e.position, ax.inner_rect) {
-                zoom(ax, e.position, e.wheel);
-            }
-    }
-}
 update :: (using ax: *Axis_2D_Cartesian) {
     for graphs2d {
         update(it);
@@ -625,6 +407,219 @@ draw :: (using ax: *Axis_2D_Cartesian) {
         draw(button_grid);
     }
 }
+fit_into_rectangle :: (using ax: *Axis_2D_Cartesian, r: Rectangle) {
+    axis_rectangle = r;
+
+    left_padding   := y_label_padding;
+    bottom_padding := x_label_padding;
+
+    inner_rect.x = r.x + axis_padding.x + left_padding;
+    inner_rect.y = r.y + axis_padding.y + title_padding ;
+    inner_rect.width  = r.width  - (axis_padding.x + axis_padding.z + left_padding);
+    inner_rect.height = r.height - (axis_padding.y + axis_padding.w + title_padding + bottom_padding);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
+    if !ax.activated then return;
+
+    if event.type == {
+        case Event_Button;
+            e := cast(*Event_Button)event;
+            if e.button_event_type != .PRESSED then return;
+
+            if e.button == ax.button_reset         then reset(ax);
+            if e.button == ax.button_equal_scaling then equal_scaling(ax);
+            if e.button == ax.button_fit           then fit_data(ax, true);
+            if e.button == ax.button_grid          then ax.show_grid = !ax.show_grid;
+
+        case Event_Mouse_Button;
+            e := cast(*Event_Mouse_Button)event;
+
+            is_over_reset := is_over(ax.button_reset        , e.position);
+            is_over_eq_sc := is_over(ax.button_equal_scaling, e.position);
+            is_over_fit   := is_over(ax.button_fit          , e.position);
+            if is_over_reset || is_over_eq_sc || is_over_fit then return;
+
+            if e.button == 0 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
+                // start dragging
+                using ax;
+                mx := ifx x_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)x_mapper).inner else x_mapper;
+                my := ifx y_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)y_mapper).inner else y_mapper;
+                drag_old_pos.x = map_inv(mx, cast(float32)e.x);
+                drag_old_pos.y = map_inv(my, cast(float32)e.y);
+
+                using inner_rect;
+                x_mapper = mapper_1d_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
+                y_mapper = mapper_1d_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
+
+                broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .MOVE));
+            }
+            if e.button == 1 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
+                // start dragging
+                using ax;
+                drag_old_pos = e.position;
+                drag_pos     = e.position;
+                is_rmb_dragging = true;
+
+                broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .RECT_ZOOM));
+            }
+        case Event_Mouse_Drag;
+            e := cast(*Event_Mouse_Drag)event;
+            ax.drag_pos = e.position;
+            if e.button == 0 {
+                if e.active {
+                    using ax;
+                    mx := cast(*Mapper_1D_Constraint)x_mapper;
+                    my := cast(*Mapper_1D_Constraint)y_mapper;
+                    match(mx, drag_old_pos.x, e.x);
+                    match(my, drag_old_pos.y, e.y);
+                }
+            }
+            if e.button == 1 {
+                if !e.active {
+                    using ax;
+                    using e.position;
+
+                    fit_bounds(ax, rectangle(
+                        min(drag_old_pos.x, x),
+                        min(drag_old_pos.y, y),
+                        Math.abs(drag_old_pos.x-x),
+                        Math.abs(drag_old_pos.y-y)
+                    ), true);
+
+                    is_rmb_dragging = false;
+                }
+            }
+        case Event_Mouse_Wheel;
+            e := cast(*Event_Mouse_Wheel)event;
+
+            if e.wheel != 0.0 && CheckCollisionPointRec(e.position, ax.inner_rect) {
+                zoom(ax, e.position, e.wheel);
+            }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+reset :: (axis: *Axis_2D_Cartesian) {
+    xm := axis.x_mapper;
+    ym := axis.y_mapper;
+    defer {
+        free(xm);
+        free(ym);
+    }
+    axis.x_mapper = clone(axis.original_x_mapper);
+    axis.y_mapper = clone(axis.original_y_mapper);
+}
+intersection_axis :: inline (axis: *Axis_2D_Cartesian, pos: Vector2) -> bool {
+    return CheckCollisionPointRec(pos, axis.inner_rect);
+}
+zoom :: (using axis: *Axis_2D_Cartesian, mouse: Vector2, wheel: float32) {
+    using inner_rect;
+    
+    delta := 0.02 * wheel;
+
+    xmin := map_inv(x_mapper, (mouse.x - x)          * delta + x        );
+    xmax := map_inv(x_mapper, (mouse.x - (x+width )) * delta + x+width  );
+    ymin := map_inv(y_mapper, (mouse.y - y)          * delta + y        );
+    ymax := map_inv(y_mapper, (mouse.y - (y+height)) * delta + y+height );
+
+    fit_bounds(x_mapper, xmin, xmax, x, x + width , true);
+    fit_bounds(y_mapper, ymin, ymax, y, y + height, true);
+}
+equal_scaling :: (using axis: *Axis_2D_Cartesian) {
+    using inner_rect;
+
+    xm := x_mapper;
+    ym := y_mapper;
+    defer {
+        free(xm);
+        free(ym);
+    }
+
+    x0 := map_inv(x_mapper, x + 0.5*width );
+    y0 := map_inv(y_mapper, y + 0.5*height);
+
+    xmin, xmax, ymin, ymax : float32;
+    if width < height {   // portrait
+        xmin = map_inv(x_mapper, x);
+        xmax = map_inv(x_mapper, x + width);
+        dxdp := (xmax-xmin)/width;
+        if flip_y then dxdp = -dxdp;
+        ymin = -dxdp*height*0.5 + y0;
+        ymax =  dxdp*height*0.5 + y0;
+    } else {                           // landscape
+        ymin = map_inv(y_mapper, y);
+        ymax = map_inv(y_mapper, y + height);
+        dydp := (ymax-ymin)/height;
+        if flip_y then dydp *= -1.0;
+        xmin = -dydp*width*0.5 + x0;
+        xmax =  dydp*width*0.5 + x0;
+    }
+
+    x_mapper = mapper_1d_constraint(
+        mapper_1d_linear(), 
+        xmin, 
+        xmax, 
+        x, 
+        x + width
+    );
+    y_mapper = mapper_1d_constraint(
+        mapper_1d_linear(), 
+        ymin, 
+        ymax, 
+        y         , //ifx flip_y then y          else y + height, 
+        y + height  //ifx flip_y then y + height else y
+    );
+}
+fit_bounds :: (using ax: *Axis_2D_Cartesian, gui_rect: Rectangle, overwrite_constraints : bool = false) {
+    min_x := map_inv(x_mapper, gui_rect.x);
+    max_x := map_inv(x_mapper, gui_rect.x+gui_rect.width);
+    min_y := map_inv(y_mapper, gui_rect.y);
+    max_y := map_inv(y_mapper, gui_rect.y+gui_rect.height);
+
+    using inner_rect;
+    fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
+    fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
+}
+bounds_x :: (using ax: *Axis_2D_Cartesian) -> float32, float32 {
+    assert(graphs2d.count > 0);
+    _min, _max := bounds_x(graphs2d[0]);
+    for i:1..graphs2d.count-1 {
+        mi, ma := bounds_x(graphs2d[i]);
+        _min = min(_min, mi);
+        _max = max(_max, ma);
+    }
+    return _min, _max;
+}
+bounds_y :: (using ax: *Axis_2D_Cartesian) -> float32, float32 {
+    assert(graphs2d.count > 0);
+    _min, _max := bounds_y(graphs2d[0]);
+    for i:1..graphs2d.count-1 {
+        mi, ma := bounds_y(graphs2d[i]);
+        _min = min(_min, mi);
+        _max = max(_max, ma);
+    }
+    return _min, _max;
+}
+fit_data :: (using ax: *Axis_2D_Cartesian, overwrite_constraints: bool = false) {
+    if graphs2d.count == 0 then return;
+
+    min_x, max_x := bounds_x(ax);
+    min_y, max_y := bounds_y(ax);
+
+    using inner_rect;
+    fit_bounds(x_mapper, min_x, max_x, x, x+width , overwrite_constraints);
+    if !flip_y {
+        fit_bounds(y_mapper, min_y, max_y, y, y+height, overwrite_constraints);
+    } else {
+        fit_bounds(y_mapper, min_y, max_y, y+height, y, overwrite_constraints);
+    }
+}
 
 
 // ########   #######  ##          ###    ########      #######  ########
@@ -681,9 +676,10 @@ axis_2d_polar :: (mapper_radius: *Mapper_1D = null, mapper_angle: *Mapper_1D = n
 }
 
 #scope_module
-intersection_axis :: (using axis: *Axis_2D_Polar, pos: Vector2) -> bool {
-    return CheckCollisionPointRec(pos, inner_rect);
-}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 draw :: (using axis: *Axis_2D_Polar) {
     fit_data(axis);
     zero := vec2(map(mapper_pixel_x, 0.0), map(mapper_pixel_y, 0.0));
@@ -738,10 +734,6 @@ update :: (using axis: *Axis_2D_Polar) {
         update(it);
     }
 }
-reset :: (axis: *Axis_2D_Polar) {
-}
-zoom :: (axis: *Axis_2D_Polar, position: Vector2, wheel: float32) {
-}
 fit_into_rectangle :: (using axis: *Axis_2D_Polar, rectangle: Rectangle) {
     axis_rectangle = rectangle;
     inner_rect = axis_rectangle;
@@ -750,14 +742,9 @@ fit_into_rectangle :: (using axis: *Axis_2D_Polar, rectangle: Rectangle) {
     inner_rect.width  -= padding_left+padding_right;
     inner_rect.height -= padding_top+padding_bottom;
 }
-fit_data :: (using axis: *Axis_2D_Polar, overwrite_constraints: bool = false) {
-    using inner_rect;
-    s := min(width, height)*0.5;
-    c := center(inner_rect);
-    fit_bounds(mapper_pixel_x, -1.0, 1.0, c.x-s, c.x+s, overwrite_constraints);
-    fit_bounds(mapper_pixel_y, 1.0, -1.0, c.y-s, c.y+s, overwrite_constraints); // flip_y
-}
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 on_event :: (ax: *Axis_2D_Polar, event: *Event) {
     if !ax.activated then return;
@@ -795,10 +782,20 @@ on_event :: (ax: *Axis_2D_Polar, event: *Event) {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-mouse_dragging :: (axis: *Axis_2D_Polar) -> *MouseState_Dragging {
-    assert(false, "not yet implemented\n");
+intersection_axis :: (using axis: *Axis_2D_Polar, pos: Vector2) -> bool {
+    return CheckCollisionPointRec(pos, inner_rect);
 }
-mouse_rmb_dragging :: (axis: *Axis_2D_Polar) -> *MouseState_RMB_Dragging {
-    assert(false, "not yet implemented\n");
+reset :: (axis: *Axis_2D_Polar) {
+}
+zoom :: (axis: *Axis_2D_Polar, position: Vector2, wheel: float32) {
+}
+fit_data :: (using axis: *Axis_2D_Polar, overwrite_constraints: bool = false) {
+    using inner_rect;
+    s := min(width, height)*0.5;
+    c := center(inner_rect);
+    fit_bounds(mapper_pixel_x, -1.0, 1.0, c.x-s, c.x+s, overwrite_constraints);
+    fit_bounds(mapper_pixel_y, 1.0, -1.0, c.y-s, c.y+s, overwrite_constraints); // flip_y
 }
