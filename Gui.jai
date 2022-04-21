@@ -46,7 +46,7 @@ Button_Framed :: struct {
     is_over: bool = false;
     is_pressed: bool = false;
 }
-button_framed :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE) -> *Button_Framed {
+button_framed :: (rect: Rectangle, text := "", font_size : s32 = 12, line_color := GREY, fill_color := RAYWHITE) -> *Button_Framed {
     res := New(Button_Framed);
     res.type = Button_Framed;
     res.rect = rect;
@@ -83,7 +83,8 @@ on_event :: (button: *Button_Framed, event: *Event) {
     }
 }
 draw :: (using button_framed: *Button_Framed) {
-    text_width := MeasureText(text, font_size);
+    // text_width := MeasureText(text, font_size);
+    text_width := measure_text_regular(text, cast(float32)font_size).x;
 
     tx := cast(s32)(rect.width  * 0.5 + rect.x - 0.5 * text_width);
     ty := cast(s32)(rect.height * 0.5 + rect.y - 0.5 * font_size );
@@ -93,15 +94,18 @@ draw :: (using button_framed: *Button_Framed) {
         bg.a = 255;
         DrawRectangleRec(rect, bg);
         DrawRectangleLinesEx(rect, 2.0, line_color);
-        DrawText(text, tx, ty, font_size, BLACK);
+        draw_text_regular(text, vec2(tx,ty), cast(float32)font_size, BLACK);
+        // DrawText(text, tx, ty, font_size, BLACK);
     } else if is_over {
         DrawRectangleRec(rect, fill_color);
         DrawRectangleLinesEx(rect, 2.0, RED);
-        DrawText(text, tx, ty, font_size, BLACK);
+        draw_text_regular(text, vec2(tx,ty), cast(float32)font_size, BLACK);
+        // DrawText(text, tx, ty, font_size, BLACK);
     } else {
         DrawRectangleRec(rect, fill_color);
         DrawRectangleLinesEx(rect, 2.0, line_color);
-        DrawText(text, tx, ty, font_size, BLACK);
+        draw_text_regular(text, vec2(tx,ty), cast(float32)font_size, BLACK);
+        // DrawText(text, tx, ty, font_size, BLACK);
     }
 }
 

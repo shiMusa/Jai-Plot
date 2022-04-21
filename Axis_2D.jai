@@ -95,7 +95,7 @@ Axis_2D_Cartesian :: struct {
     axis_padding := Vector4.{60.0, 30.0, 60.0, 30.0}; // left, top, right, bottom
 
     // ticks
-    font_size : s32 = 10;
+    font_size : s32 = 20;
     tick_length := 5;
     tick_thickness := 2.0;
     y_padding := 8;
@@ -242,18 +242,21 @@ draw :: (using ax: *Axis_2D_Cartesian) {
                 label := sprint("%", formatFloat(it, trailing_width=4, mode=.SHORTEST));
                 defer free(label);
                 
-                text_width := MeasureText(label,font_size);
+                // text_width := MeasureText(label,font_size);
+                text_width := measure_text_regular(label, cast(float32)font_size).x;
 
                 if tx + text_width > x+width then break;
 
                 if !first_tick || Math.abs(tx-xend) > cast(float32)(tick_padding+text_width) {
                     if show_tick_labels_bottom {
                         DrawLineEx(vec2(tx, y+height), vec2(tx, y+height+tick_length), tick_thickness, BLACK);
-                        DrawText(label,cast(s32)tx,cast(s32)(y+height+y_padding),font_size,BLACK);
+                        // DrawText(label,cast(s32)tx,cast(s32)(y+height+y_padding),font_size,BLACK);
+                        draw_text_regular(label,vec2(tx, y+height+y_padding), cast(float32)font_size,BLACK);
                     }
                     if show_tick_labels_top {
                         DrawLineEx(vec2(tx, y-tick_length), vec2(tx, y), tick_thickness, BLACK);
-                        DrawText(label,cast(s32)tx,cast(s32)(y-y_padding-font_size),font_size,BLACK);
+                        // DrawText(label,cast(s32)tx,cast(s32)(y-y_padding-font_size),font_size,BLACK);
+                        draw_text_regular(label,vec2(tx, y-y_padding-font_size), cast(float32)font_size,BLACK);
                     }
                     first_tick = true;
                     xend = tx+text_width;
@@ -271,16 +274,19 @@ draw :: (using ax: *Axis_2D_Cartesian) {
                 label := sprint("%", formatFloat(it, trailing_width=4, mode=.SHORTEST));
                 defer free(label);
                 
-                text_width := MeasureText(label,font_size);
+                // text_width := MeasureText(label,font_size);
+                text_width := measure_text_regular(label, cast(float32)font_size).x;
 
                 if !first_tick || Math.abs(ty-yend) > cast(float32)(tick_padding+font_size) {
                     if show_tick_labels_left {
                         DrawLineEx(vec2(x-tick_length, ty), vec2(x, ty), tick_thickness, BLACK);
-                        DrawText(label,cast(s32)(x-text_width-x_padding),cast(s32)ty,font_size,BLACK);
+                        // DrawText(label,cast(s32)(x-text_width-x_padding),cast(s32)ty,font_size,BLACK);
+                        draw_text_regular(label,vec2(x-text_width-x_padding, ty), cast(float32)font_size,BLACK);
                     }
                     if show_tick_labels_right {
                         DrawLineEx(vec2(x+width, ty), vec2(x+width+tick_length, ty), tick_thickness, BLACK);
-                        DrawText(label,cast(s32)(x+width+x_padding),cast(s32)ty,font_size,BLACK);
+                        // DrawText(label,cast(s32)(x+width+x_padding),cast(s32)ty,font_size,BLACK);
+                        draw_text_regular(label,vec2(x+width+x_padding, ty), cast(float32)font_size,BLACK);
                     }
                     first_tick = true;
                     yend = ty;
@@ -330,20 +336,23 @@ draw :: (using ax: *Axis_2D_Cartesian) {
 
 
     if title != "" {
-        fs := 2*font_size;
-        text_width := MeasureText(title, fs);
+        fs := 2.0*font_size;
+        text_width := measure_text_regular(title, fs).x;
         x := center_x(inner_rect) - 0.5*text_width;
-        DrawText(title, cast(s32)x, cast(s32)(axis_rectangle.y + 0.5*title_padding - 0.5*fs), cast(s32)fs, BLACK);
+        draw_text_regular(title, vec2(x, axis_rectangle.y + 0.5*title_padding - 0.5*fs), fs);
     }
 
     if x_label != "" {
         if !x_label_texture {
-            xw := 10 + MeasureText(x_label, font_size);
+            // xw := 10 + MeasureText(x_label, font_size);
+            xw := 10 + cast(s32)measure_text_regular(x_label, cast(float32)font_size).x;
             x_label_texture = New(RenderTexture2D, false);
             <<x_label_texture = render_to_texture(xw, 2*font_size, #code {
                 ClearBackground(TRANSPARENT);
-                DrawText(x_label, 5, cast(s32)(0.5*font_size), font_size, BLACK);
+                // DrawText(x_label, 5, cast(s32)(0.5*font_size), font_size, BLACK);
+                draw_text_regular(x_label, vec2(5, cast(s32)(0.5*font_size)), cast(float32)font_size, BLACK);
             });
+            SetTextureFilter(x_label_texture.texture, xx TextureFilter.BILINEAR);
         }
 
         tw := x_label_texture.texture.width;
@@ -360,12 +369,15 @@ draw :: (using ax: *Axis_2D_Cartesian) {
 
     if y_label != "" {
         if !y_label_texture {
-            yw := 10 + MeasureText(y_label, font_size);
+            // yw := 10 + MeasureText(y_label, font_size);
+            yw := 10 + cast(s32)measure_text_regular(y_label, cast(float32)font_size).x;
             y_label_texture = New(RenderTexture2D, false);
             <<y_label_texture = render_to_texture(yw, 2*font_size, #code {
                 ClearBackground(TRANSPARENT);
-                DrawText(y_label, 5, cast(s32)(0.5*font_size), font_size, BLACK);
+                // DrawText(y_label, 5, cast(s32)(0.5*font_size), font_size, BLACK);
+                draw_text_regular(y_label, vec2(5, cast(s32)(0.5*font_size)), cast(float32)font_size, BLACK);
             });
+            SetTextureFilter(y_label_texture.texture, xx TextureFilter.BILINEAR);
         }
 
         tw := y_label_texture.texture.width;

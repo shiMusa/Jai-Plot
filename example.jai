@@ -154,7 +154,7 @@ main :: () {
 
 
     {
-        add_page(page_single(axis_2d_cartesian(title="bars and boxes"), "bars"));
+        add_page(page_single(axis_2d_cartesian(title="Bars and Boxes"), "bars"));
 
         plot2d(multi(
             bars(ccx, ccy, ORANGE),

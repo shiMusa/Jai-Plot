@@ -21,6 +21,17 @@ WINDOW_RECT := Rectangle.{0,0,800,600};
 _broadcaster : Broadcaster;
 _mouse : *MouseState;
 _plot : Plot;
+_font_regular : Font;
+
+
+measure_text_regular :: inline (msg: string, font_size: float32 = 12.0) -> Vector2 {
+    return MeasureTextEx(_font_regular, msg, font_size, 0.0);
+}
+draw_text_regular :: inline (msg: string, position: Vector2, font_size: float32 = 12.0, color := BLACK) {
+    DrawTextEx(_font_regular, msg, position, font_size, 0.0, color);
+}
+
+
 
 
 // ########  ##        #######  ########
@@ -163,6 +174,11 @@ _debug_print_events :: ($DEBUG: bool = false) {
 plot_render :: () {
     Window(cast(s32)WINDOW_RECT.width, cast(s32)WINDOW_RECT.height, "Jai Plot");
     SetTargetFPS(60);
+
+    // _font_regular = LoadFontEx("../fonts/lmroman12-regular.otf", 12*2*2*2, null, 0);
+    _font_regular = LoadFontEx("../fonts/lmroman12-regular.otf", 120, null, 0);
+    // _font_regular = LoadFont("../fonts/lmroman12-regular.otf");
+    SetTextureFilter(_font_regular.texture, xx TextureFilter.BILINEAR);
 
     camera := camera2d();
     _mouse = cast(*MouseState)mouse_free();

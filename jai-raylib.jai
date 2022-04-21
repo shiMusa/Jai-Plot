@@ -50,11 +50,17 @@ Mode2D :: (camera: Camera2D, code: Code) #expand {
     EndMode2D();
 }
 
-DrawText :: (text: string, posx: s32, posy: s32, fontSize: s32, color: Color) {
+DrawText :: (text: string, posx: s32, posy: s32, font_size: s32, color: Color) {
     cstr := to_c_string(text);
     defer free(cstr);
 
-    DrawText(cstr, posx, posy, fontSize, color);
+    DrawText(cstr, posx, posy, font_size, color);
+}
+DrawTextEx :: (font: Font, text: string, position: Vector2, font_size: float, spacing: float, color: Color) {
+    cstr := to_c_string(text);
+    defer free(cstr);
+
+    DrawTextEx(font, cstr, position, font_size, spacing, color);
 }
 
 MeasureText :: (text: string, font_size: s32) -> s32 {
@@ -62,6 +68,12 @@ MeasureText :: (text: string, font_size: s32) -> s32 {
     defer free(cstr);
 
     return MeasureText(cstr, font_size);
+}
+MeasureTextEx :: (font: Font, text: string, font_size: float, spacing: float) -> Vector2 {
+    cstr := to_c_string(text);
+    defer free(cstr);
+
+    return MeasureTextEx(font, cstr, font_size, spacing);
 }
 
 DrawLineStrip :: inline (points: []Vector2, color: Color) {

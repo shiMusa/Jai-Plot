@@ -204,7 +204,7 @@ bounds_y :: inline (using graph: *Graph_2D_Fill) -> float32, float32 {
 // ##    ##    ##    ##     ## ##     ## ##     ## ##
 //  ######     ##    ##     ## ########   #######  ########
 
-SYMBOL_SIZE :: 128;
+SYMBOL_SIZE :: 32;
 
 #scope_export
 Symbols :: enum u8 {
@@ -277,6 +277,7 @@ update :: (using graph: *Graph_2D_Symbols) {
                     DrawLineEx(SYMBOL_SIZE*vec2(0.0,1.0), SYMBOL_SIZE*vec2(1.0,0.0), 0.3*SYMBOL_SIZE, WHITE);
             }
         });
+        SetTextureFilter(it.texture, xx TextureFilter.BILINEAR);
     }
     symbols_initialized = true;
 }
