@@ -181,14 +181,16 @@ str :: (event: *Event_Mouse_Position) -> string {
 
 Event_Mouse_Drag :: struct {
     using event: Event;
-    button: u8;
     using position: Vector2;
+    button: u8;
+    active: bool;
 }
-event_mouse_drag :: (position: Vector2, button: u8) -> *Event_Mouse_Drag {
+event_mouse_drag :: (position: Vector2, button: u8, active := true) -> *Event_Mouse_Drag {
     res := New(Event_Mouse_Drag);
     res.type = Event_Mouse_Drag;
     res.position = position;
     res.button = button;
+    res.active = active;
     return res;
 }
 str :: (event: *Event_Mouse_Drag) -> string {

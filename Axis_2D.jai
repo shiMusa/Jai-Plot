@@ -122,6 +122,8 @@ Axis_2D_Cartesian :: struct {
 
     // mouse
     drag_old_pos: Vector2;
+    drag_pos: Vector2;
+    is_rmb_dragging: bool = false;
 }
 axis_2d_cartesian :: (x_mapper: *Mapper_1D = null, y_mapper: *Mapper_1D = null, title:="", x_label:="", y_label:="") -> *Axis_2D_Cartesian {
     res := New(Axis_2D_Cartesian);
@@ -303,30 +305,53 @@ on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
 
             if e.button == 0 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
                 // start dragging
-                {
-                    using ax;
-                    mx := ifx x_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)x_mapper).inner else x_mapper;
-                    my := ifx y_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)y_mapper).inner else y_mapper;
-                    drag_old_pos.x = map_inv(mx, cast(float32)e.x);
-                    drag_old_pos.y = map_inv(my, cast(float32)e.y);
+                using ax;
+                mx := ifx x_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)x_mapper).inner else x_mapper;
+                my := ifx y_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)y_mapper).inner else y_mapper;
+                drag_old_pos.x = map_inv(mx, cast(float32)e.x);
+                drag_old_pos.y = map_inv(my, cast(float32)e.y);
 
-                    using inner_rect;
-                    x_mapper = mapper_1d_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
-                    y_mapper = mapper_1d_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
-                }
+                using inner_rect;
+                x_mapper = mapper_1d_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
+                y_mapper = mapper_1d_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
+
                 broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .MOVE));
             }
             if e.button == 1 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
+                // start dragging
+                using ax;
+                drag_old_pos = e.position;
+                drag_pos     = e.position;
+                is_rmb_dragging = true;
+
                 broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .RECT_ZOOM));
             }
         case Event_Mouse_Drag;
             e := cast(*Event_Mouse_Drag)event;
+            ax.drag_pos = e.position;
             if e.button == 0 {
-                using ax;
-                mx := cast(*Mapper_1D_Constraint)x_mapper;
-                my := cast(*Mapper_1D_Constraint)y_mapper;
-                match(mx, drag_old_pos.x, e.x);
-                match(my, drag_old_pos.y, e.y);
+                if e.active {
+                    using ax;
+                    mx := cast(*Mapper_1D_Constraint)x_mapper;
+                    my := cast(*Mapper_1D_Constraint)y_mapper;
+                    match(mx, drag_old_pos.x, e.x);
+                    match(my, drag_old_pos.y, e.y);
+                }
+            }
+            if e.button == 1 {
+                if !e.active {
+                    using ax;
+                    using e.position;
+
+                    fit_bounds(ax, rectangle(
+                        min(drag_old_pos.x, x),
+                        min(drag_old_pos.y, y),
+                        Math.abs(drag_old_pos.x-x),
+                        Math.abs(drag_old_pos.y-y)
+                    ), true);
+
+                    is_rmb_dragging = false;
+                }
             }
         case Event_Mouse_Wheel;
             e := cast(*Event_Mouse_Wheel)event;
@@ -510,6 +535,17 @@ draw :: (using ax: *Axis_2D_Cartesian) {
     if show_frame {
         DrawRectangleLinesEx(inner_rect, 2.0, BLACK);
     }
+
+
+    if is_rmb_dragging {
+        DrawRectangleLinesEx(rectangle(
+            min(drag_old_pos.x, drag_pos.x),
+            min(drag_old_pos.y, drag_pos.y),
+            Math.abs(drag_old_pos.x-drag_pos.x),
+            Math.abs(drag_old_pos.y-drag_pos.y)
+        ), 2.0, RED);
+    }
+
 
     if title != "" {
         fs := 2*font_size;

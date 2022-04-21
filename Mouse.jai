@@ -98,6 +98,7 @@ on_event :: (using mouse: *MouseState_Dragging, event: *Event) {
 }
 mouse_stop_dragging :: (using mouse: *MouseState_Dragging) {
     unsubscribe(_broadcaster, mouse);
+    broadcast(_broadcaster, event_mouse_drag(position, button=0, active=false));
 }
 
 
@@ -105,28 +106,19 @@ mouse_stop_dragging :: (using mouse: *MouseState_Dragging) {
 
 MouseState_RMB_Dragging :: struct {
     using mouse_state: MouseState;
-    old_x, old_y: float32;
-    axis: *Axis_2D_Cartesian;
 }
 mouse_rmb_dragging :: (axis: *Axis_2D_Cartesian) -> *MouseState_RMB_Dragging {
     res := New(MouseState_RMB_Dragging);
     res.type = MouseState_RMB_Dragging;
-    res.x = cast(float32)GetMouseX();
-    res.y = cast(float32)GetMouseY();
-    res.axis = axis;
-    res.old_x = res.x;
-    res.old_y = res.y;
-
     subscribe(_broadcaster, res, on_event);
-
     return res;
 }
 on_event :: (using mouse: *MouseState_RMB_Dragging, event: *Event) {
     if event.type == {
         case Event_Mouse_Position;
             e := cast(*Event_Mouse_Position)event;
-            x = e.position.x;
-            y = e.position.y;
+            position = e.position;
+            broadcast(_broadcaster, event_mouse_drag(e.position, button=1));
         case Event_Mouse_Button;
             e := cast(*Event_Mouse_Button)event;
             if e.button == 1 && e.button_event_type == .RELEASED {
@@ -136,44 +128,9 @@ on_event :: (using mouse: *MouseState_RMB_Dragging, event: *Event) {
             }
     }
 }
-draw :: (using mouse: *MouseState_RMB_Dragging) {
-    rx, rwidth, ry, rheight: float32;
-    if old_x < x {
-        rx = old_x;
-        rwidth = x-old_x;
-    } else {
-        rx = x;
-        rwidth = old_x-x;
-    }
-    if old_y < y {
-        ry = old_y;
-        rheight = y-old_y;
-    } else {
-        ry = y;
-        rheight = old_y-y;
-    }
-
-    DrawRectangleLinesEx(rectangle(rx,ry,rwidth,rheight), 2.0, RED);
-}
+draw :: (using mouse: *MouseState_RMB_Dragging) {}
 mouse_stop_dragging :: (using mouse: *MouseState_RMB_Dragging) {
     unsubscribe(_broadcaster, mouse);
-    
-    rx, rwidth, ry, rheight: float32;
-    if old_x < x {
-        rx = old_x;
-        rwidth = x-old_x;
-    } else {
-        rx = x;
-        rwidth = old_x-x;
-    }
-    if old_y < y {
-        ry = old_y;
-        rheight = y-old_y;
-    } else {
-        ry = y;
-        rheight = old_y-y;
-    }
-
-    fit_bounds(axis, rectangle(rx,ry,rwidth,rheight), true);
+    broadcast(_broadcaster, event_mouse_drag(position, button=1, active=false));
 }
 
