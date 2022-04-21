@@ -53,6 +53,7 @@ Event_Types :: Type.[
     Event_Mouse_Position,
     Event_Mouse_Button,
     Event_Mouse_Wheel,
+    Event_Mouse_Drag,
     Event_Axis,
     Event_Button,
     Event_Plot
@@ -166,7 +167,7 @@ str :: (event: *Event_Axis) -> string {
 
 Event_Mouse_Position :: struct {
     using event: Event;
-    position: Vector2;
+    using position: Vector2;
 }
 event_mouse_position :: (position: Vector2) -> *Event_Mouse_Position {
     res := New(Event_Mouse_Position);
@@ -178,11 +179,26 @@ str :: (event: *Event_Mouse_Position) -> string {
     return sprint("%", <<event);
 }
 
+Event_Mouse_Drag :: struct {
+    using event: Event;
+    button: u8;
+    using position: Vector2;
+}
+event_mouse_drag :: (position: Vector2, button: u8) -> *Event_Mouse_Drag {
+    res := New(Event_Mouse_Drag);
+    res.type = Event_Mouse_Drag;
+    res.position = position;
+    res.button = button;
+    return res;
+}
+str :: (event: *Event_Mouse_Drag) -> string {
+    return sprint("%", <<event);
+}
 
 
 Event_Mouse_Wheel :: struct {
     using event: Event;
-    position: Vector2;
+    using position: Vector2;
     wheel: float32;
 }
 event_mouse_wheel :: (position: Vector2, wheel: float32) -> *Event_Mouse_Wheel {
@@ -206,7 +222,7 @@ ButtonEventType :: enum u8 {
 }
 Event_Mouse_Button :: struct {
     using event: Event;
-    position: Vector2;
+    using position: Vector2;
     button: u8;
     button_event_type: ButtonEventType;
 }

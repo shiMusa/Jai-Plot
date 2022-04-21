@@ -99,7 +99,7 @@ heat : [H*H]float32;
 
 main :: () {
 
-    plot(highdpi=true, callback= ()=>{ stop_simulation = true; } );
+    plot(highdpi=false, callback= ()=>{ stop_simulation = true; } );
 
     {
         x_mapper := mapper_1d_constraint(mapper_1d_logarithmic(), min_x =  0.1, max_x = 100.0);

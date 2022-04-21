@@ -118,6 +118,10 @@ Axis_2D_Cartesian :: struct {
     y_padding := 8;
     x_padding := 8;
     tick_padding := 5;
+
+
+    // mouse
+    drag_old_pos: Vector2;
 }
 axis_2d_cartesian :: (x_mapper: *Mapper_1D = null, y_mapper: *Mapper_1D = null, title:="", x_label:="", y_label:="") -> *Axis_2D_Cartesian {
     res := New(Axis_2D_Cartesian);
@@ -298,10 +302,31 @@ on_event :: (ax: *Axis_2D_Cartesian, event: *Event) {
             if is_over_reset || is_over_eq_sc || is_over_fit then return;
 
             if e.button == 0 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
+                // start dragging
+                {
+                    using ax;
+                    mx := ifx x_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)x_mapper).inner else x_mapper;
+                    my := ifx y_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)y_mapper).inner else y_mapper;
+                    drag_old_pos.x = map_inv(mx, cast(float32)e.x);
+                    drag_old_pos.y = map_inv(my, cast(float32)e.y);
+
+                    using inner_rect;
+                    x_mapper = mapper_1d_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
+                    y_mapper = mapper_1d_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
+                }
                 broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .MOVE));
             }
             if e.button == 1 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
                 broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .RECT_ZOOM));
+            }
+        case Event_Mouse_Drag;
+            e := cast(*Event_Mouse_Drag)event;
+            if e.button == 0 {
+                using ax;
+                mx := cast(*Mapper_1D_Constraint)x_mapper;
+                my := cast(*Mapper_1D_Constraint)y_mapper;
+                match(mx, drag_old_pos.x, e.x);
+                match(my, drag_old_pos.y, e.y);
             }
         case Event_Mouse_Wheel;
             e := cast(*Event_Mouse_Wheel)event;
@@ -614,6 +639,8 @@ axis_2d_polar :: (mapper_radius: *Mapper_1D = null, mapper_angle: *Mapper_1D = n
 
     res.original_mapper = clone(res.mapper);
 
+    subscribe(_broadcaster, res, on_event);
+
     return res;
 }
 
@@ -694,6 +721,45 @@ fit_data :: (using axis: *Axis_2D_Polar, overwrite_constraints: bool = false) {
     fit_bounds(mapper_pixel_x, -1.0, 1.0, c.x-s, c.x+s, overwrite_constraints);
     fit_bounds(mapper_pixel_y, 1.0, -1.0, c.y-s, c.y+s, overwrite_constraints); // flip_y
 }
+
+
+on_event :: (ax: *Axis_2D_Polar, event: *Event) {
+    if !ax.activated then return;
+
+    if event.type == {
+        case Event_Button;
+            e := cast(*Event_Button)event;
+            if e.button_event_type != .PRESSED then return;
+
+            // if e.button == ax.button_reset         then reset(ax);
+            // if e.button == ax.button_equal_scaling then equal_scaling(ax);
+            // if e.button == ax.button_fit           then fit_data(ax, true);
+            // if e.button == ax.button_grid          then ax.show_grid = !ax.show_grid;
+
+        case Event_Mouse_Button;
+            e := cast(*Event_Mouse_Button)event;
+
+            // is_over_reset := is_over(ax.button_reset        , e.position);
+            // is_over_eq_sc := is_over(ax.button_equal_scaling, e.position);
+            // is_over_fit   := is_over(ax.button_fit          , e.position);
+            // if is_over_reset || is_over_eq_sc || is_over_fit then return;
+
+            // if e.button == 0 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
+            //     broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .MOVE));
+            // }
+            // if e.button == 1 && e.button_event_type == .PRESSED && CheckCollisionPointRec(e.position, ax.inner_rect) {
+            //     broadcast(_broadcaster, event_axis(cast(*Axis_2D)ax, .RECT_ZOOM));
+            // }
+        case Event_Mouse_Wheel;
+            e := cast(*Event_Mouse_Wheel)event;
+
+            // if e.wheel != 0.0 && CheckCollisionPointRec(e.position, ax.inner_rect) {
+            //     zoom(ax, e.position, e.wheel);
+            // }
+    }
+}
+
+
 mouse_dragging :: (axis: *Axis_2D_Polar) -> *MouseState_Dragging {
     assert(false, "not yet implemented\n");
 }

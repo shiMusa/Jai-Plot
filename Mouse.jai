@@ -16,11 +16,9 @@ MouseState_Types :: Type.[
     MouseState_RMB_Dragging
 ];
 
-
 MouseState :: struct {
     type: Type;
-    x: float32 = 0.0;
-    y: float32 = 0.0;
+    using position: Vector2;
 }
 
 draw :: (b: *MouseState) {
@@ -65,11 +63,10 @@ on_event :: (using mouse: *MouseState_Free, event: *Event) {
     }
 }
 
+
+
 MouseState_Dragging :: struct {
     using mouse_state: MouseState;
-    old_x: float32 = 0.0;
-    old_y: float32 = 0.0;
-    axis: *Axis_2D_Cartesian;
 }
 mouse_dragging :: (using axis: *Axis_2D_Cartesian) -> *MouseState_Dragging {
     using inner_rect;
@@ -78,15 +75,6 @@ mouse_dragging :: (using axis: *Axis_2D_Cartesian) -> *MouseState_Dragging {
     res.type = MouseState_Dragging;
     res.x = cast(float32)GetMouseX();
     res.y = cast(float32)GetMouseY();
-    res.axis = axis;
-
-    mx := ifx x_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)x_mapper).inner else x_mapper;
-    my := ifx y_mapper.type == Mapper_1D_Constraint then (cast(*Mapper_1D_Constraint)y_mapper).inner else y_mapper;
-    res.old_x = map_inv(mx, cast(float32)res.x);
-    res.old_y = map_inv(my, cast(float32)res.y);
-
-    x_mapper = mapper_1d_constraint(mx, map_inv(mx, x), map_inv(mx, x+width ), x, x+width );
-    y_mapper = mapper_1d_constraint(my, map_inv(my, y), map_inv(my, y+height), y, y+height);
 
     subscribe(_broadcaster, res, on_event);
     
@@ -97,12 +85,8 @@ on_event :: (using mouse: *MouseState_Dragging, event: *Event) {
     if event.type == {
         case Event_Mouse_Position;
             e := cast(*Event_Mouse_Position)event;
-            x = e.position.x;
-            y = e.position.y;
-            mx := cast(*Mapper_1D_Constraint)axis.x_mapper;
-            my := cast(*Mapper_1D_Constraint)axis.y_mapper;
-            match(mx, old_x, x);
-            match(my, old_y, y);
+            position = e.position;
+            broadcast(_broadcaster, event_mouse_drag(e.position, button=0));
         case Event_Mouse_Button;
             e := cast(*Event_Mouse_Button)event;
             if e.button == 0 && e.button_event_type == .RELEASED {
