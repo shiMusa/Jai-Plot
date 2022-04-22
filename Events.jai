@@ -9,12 +9,12 @@
 // ########  ##     ##  #######  ##     ## ########   ######  ##     ##  ######     ##    ######## ##     ##
 
 Broadcaster :: struct {
-    subscriptions: [..]Subscription;
-    
     Subscription :: struct {
         subscriber: *void;
         callback: (*void, *Event) -> ();
     }
+    
+    subscriptions: [..]Subscription;
 }
 subscribe :: (bus: Broadcaster, sub: *$T, callback: (*T, *Event)) {
     subscription := array_add(*bus.subscriptions);

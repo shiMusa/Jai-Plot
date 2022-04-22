@@ -84,7 +84,7 @@ on_event :: (button: *Button_Framed, event: *Event) {
 }
 draw :: (using button_framed: *Button_Framed) {
     // text_width := MeasureText(text, font_size);
-    text_width := measure_text_regular(text, cast(float32)font_size).x;
+    text_width := measure_text_regular(text, font_size).x;
 
     tx := cast(s32)(rect.width  * 0.5 + rect.x - 0.5 * text_width);
     ty := cast(s32)(rect.height * 0.5 + rect.y - 0.5 * font_size );
@@ -94,17 +94,17 @@ draw :: (using button_framed: *Button_Framed) {
         bg.a = 255;
         DrawRectangleRec(rect, bg);
         DrawRectangleLinesEx(rect, 2.0, line_color);
-        draw_text_regular(text, vec2(tx,ty), cast(float32)font_size, BLACK);
+        draw_text_regular(text, vec2(tx,ty), font_size, BLACK);
         // DrawText(text, tx, ty, font_size, BLACK);
     } else if is_over {
         DrawRectangleRec(rect, fill_color);
         DrawRectangleLinesEx(rect, 2.0, RED);
-        draw_text_regular(text, vec2(tx,ty), cast(float32)font_size, BLACK);
+        draw_text_regular(text, vec2(tx,ty), font_size, BLACK);
         // DrawText(text, tx, ty, font_size, BLACK);
     } else {
         DrawRectangleRec(rect, fill_color);
         DrawRectangleLinesEx(rect, 2.0, line_color);
-        draw_text_regular(text, vec2(tx,ty), cast(float32)font_size, BLACK);
+        draw_text_regular(text, vec2(tx,ty), font_size, BLACK);
         // DrawText(text, tx, ty, font_size, BLACK);
     }
 }

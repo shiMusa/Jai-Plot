@@ -21,14 +21,61 @@ WINDOW_RECT := Rectangle.{0,0,800,600};
 _broadcaster : Broadcaster;
 _mouse : *MouseState;
 _plot : Plot;
-_font_regular : Font;
+
+_font_initialized : [100]bool;
+_font_regular     : [8]Font = ---;
 
 
-measure_text_regular :: inline (msg: string, font_size: float32 = 12.0) -> Vector2 {
-    return MeasureTextEx(_font_regular, msg, font_size, 0.0);
+init_fonts :: () {
+    if _plot.highdpi {
+        _font_regular[0] = LoadFontEx("../fonts/lmroman5-regular.otf" ,  5*2*2, null, 0);
+        _font_regular[1] = LoadFontEx("../fonts/lmroman6-regular.otf" ,  6*2*2, null, 0);
+        _font_regular[2] = LoadFontEx("../fonts/lmroman7-regular.otf" ,  7*2*2, null, 0);
+        _font_regular[3] = LoadFontEx("../fonts/lmroman8-regular.otf" ,  8*2*2, null, 0);
+        _font_regular[4] = LoadFontEx("../fonts/lmroman9-regular.otf" ,  9*2*2, null, 0);
+        _font_regular[5] = LoadFontEx("../fonts/lmroman10-regular.otf", 10*2*2, null, 0);
+        _font_regular[6] = LoadFontEx("../fonts/lmroman12-regular.otf", 12*2*2, null, 0);
+        _font_regular[7] = LoadFontEx("../fonts/lmroman17-regular.otf", 17*2*2, null, 0);
+    } else {
+        _font_regular[0] = LoadFontEx("../fonts/lmroman5-regular.otf" ,  5*2, null, 0);
+        _font_regular[1] = LoadFontEx("../fonts/lmroman6-regular.otf" ,  6*2, null, 0);
+        _font_regular[2] = LoadFontEx("../fonts/lmroman7-regular.otf" ,  7*2, null, 0);
+        _font_regular[3] = LoadFontEx("../fonts/lmroman8-regular.otf" ,  8*2, null, 0);
+        _font_regular[4] = LoadFontEx("../fonts/lmroman9-regular.otf" ,  9*2, null, 0);
+        _font_regular[5] = LoadFontEx("../fonts/lmroman10-regular.otf", 10*2, null, 0);
+        _font_regular[6] = LoadFontEx("../fonts/lmroman12-regular.otf", 12*2, null, 0);
+        _font_regular[7] = LoadFontEx("../fonts/lmroman17-regular.otf", 17*2, null, 0);
+    }
+
+    for _font_regular {
+        SetTextureFilter(it.texture, xx TextureFilter.BILINEAR);
+    }
 }
-draw_text_regular :: inline (msg: string, position: Vector2, font_size: float32 = 12.0, color := BLACK) {
-    DrawTextEx(_font_regular, msg, position, font_size, 0.0, color);
+
+
+
+measure_text_regular :: inline (msg: string, font_size: int = 12) -> Vector2 {
+    assert(font_size >= 0 && font_size < 100);
+
+    for _font_regular {
+        if (it.baseSize > 2*font_size && _plot.highdpi) 
+        || (it.baseSize > font_size && !_plot.highdpi) 
+        || it_index == _font_regular.count-1 {
+            return MeasureTextEx(it, msg, cast(float32)font_size, 0.0);
+        }
+    }
+}
+draw_text_regular :: inline (msg: string, position: Vector2, font_size: int = 12, color := BLACK) {
+    assert(font_size >= 0 && font_size < 100);
+    
+    for _font_regular {
+        if (it.baseSize > 2*font_size && _plot.highdpi) 
+        || (it.baseSize > font_size && !_plot.highdpi) 
+        || it_index == _font_regular.count-1 {
+            DrawTextEx(it, msg, position, cast(float32)font_size, 0.0, color);
+            return;
+        }
+    }
 }
 
 
@@ -55,6 +102,8 @@ Plot :: struct {
     callback: () -> ();
 
     buttons: [..]*Button_Tab;
+
+    highdpi : bool;
 }
 
 
@@ -66,6 +115,7 @@ plot :: (msaa : bool = true, highdpi: bool = false, callback: ()->() = _empty) {
     if msaa    then flags |= ConfigFlags.MSAA_4X_HINT;
     SetConfigFlags(xx flags);
 
+    _plot.highdpi = highdpi;
     _plot.callback = callback;
     _plot.pages = NewResizableArray(0, *Page);
     _plot.buttons = NewResizableArray(0, *Button_Tab);
@@ -175,10 +225,16 @@ plot_render :: () {
     Window(cast(s32)WINDOW_RECT.width, cast(s32)WINDOW_RECT.height, "Jai Plot");
     SetTargetFPS(60);
 
-    // _font_regular = LoadFontEx("../fonts/lmroman12-regular.otf", 12*2*2*2, null, 0);
-    _font_regular = LoadFontEx("../fonts/lmroman12-regular.otf", 120, null, 0);
-    // _font_regular = LoadFont("../fonts/lmroman12-regular.otf");
-    SetTextureFilter(_font_regular.texture, xx TextureFilter.BILINEAR);
+
+    init_fonts();
+    // for i:10..48-1 {
+    //     // _font_regular = LoadFontEx("../fonts/lmroman12-regular.otf", 12*2*2*2, null, 0);
+    //     print("creating font of size %\n", i);
+    //     s := ifx _plot.highdpi then 2*i else i;
+    //     _font_regular[i] = LoadFontEx("../fonts/lmroman12-regular.otf", cast(s32)s, null, 0);
+    //     // _font_regular = LoadFont("../fonts/lmroman12-regular.otf");
+    //     // SetTextureFilter(_font_regular[i].texture, xx TextureFilter.BILINEAR);
+    // }
 
     camera := camera2d();
     _mouse = cast(*MouseState)mouse_free();
