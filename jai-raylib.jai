@@ -50,6 +50,40 @@ Mode2D :: (camera: Camera2D, code: Code) #expand {
     EndMode2D();
 }
 
+ShaderMode :: (shader: Shader, colde: Code) #expand {
+    BeginShaderMode(shader);
+    #insert code;
+    EndShaderMode();
+}
+
+ShaderMode :: (shader: Shader) #expand {
+    BeginShaderMode(shader);
+    `defer EndShaderMode();
+}
+
+
+LoadSdfFont :: (file_name: string, font_size: int) -> Font {
+    c_file_name := to_c_string(file_name); defer free(c_file_name);
+
+
+    fileSize: u32;
+    fileData := LoadFileData(c_file_name, *fileSize);
+    print("% read: % bytes\n", file_name, fileSize);
+
+    res : Font;
+    res.baseSize = cast(s32)font_size;
+    res.glyphCount = 95;
+    res.glyphs = LoadFontData(fileData, cast(s32)fileSize, cast(s32)font_size, null, 0, xx FontType.SDF);
+    atlas := GenImageFontAtlas(res.glyphs, *res.recs, 95, cast(s32)font_size, 0, 1);
+    res.texture = LoadTextureFromImage(atlas);
+    SetTextureFilter(res.texture, xx TextureFilter.BILINEAR);
+    UnloadImage(atlas);
+    UnloadFileData(fileData);
+
+    return res;
+}
+
+
 DrawText :: (text: string, posx: s32, posy: s32, font_size: s32, color: Color) {
     cstr := to_c_string(text);
     defer free(cstr);
