@@ -15,173 +15,13 @@ Math :: #import "Math";
 #load "Axis_2D.jai";
 #load "Mouse.jai";
 #load "Page.jai";
+#load "TextFont.jai";
 
 
 WINDOW_RECT := Rectangle.{0,0,800,600};
 _broadcaster : Broadcaster;
 _mouse : *MouseState;
 _plot : Plot;
-
-FONT_LARGE   :: 42;
-FONT_DEFAULT :: 24;
-FONT_SMALL   :: 18;
-_font_roman : [..]Font;
-_font_mono  : [..]Font;
-_font_sans  : [..]Font;
-_sdf_shader : Shader;
-
-init_fonts :: () {
-
-    _font_roman = NewResizableArray(10, Font, false);
-    _font_mono  = NewResizableArray(10, Font, false);
-    _font_sans  = NewResizableArray(10, Font, false);
-
-
-    m := ifx _plot.highdpi then 2 else 1;
-    font : Font = ---; 
-    
-    font = LoadFontExJai("../fonts/lmroman8-regular.otf", FONT_SMALL*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    array_add(*_font_roman, font);
-    font = LoadFontExJai("../fonts/lmmono8-regular.otf", FONT_SMALL*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    array_add(*_font_mono , font);
-    font = LoadFontExJai("../fonts/lmsans8-regular.otf", FONT_SMALL*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    array_add(*_font_sans , font);
-    print("small font generated\n");
-
-    font = LoadFontExJai("../fonts/lmroman12-regular.otf", FONT_DEFAULT*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    array_add(*_font_roman, font);
-    font = LoadFontExJai("../fonts/lmmono12-regular.otf", FONT_DEFAULT*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    array_add(*_font_mono , font);
-    font = LoadFontExJai("../fonts/lmsans10-regular.otf", FONT_DEFAULT*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    array_add(*_font_sans , font);
-    print("default font generated\n");
-
-    font = LoadFontExJai("../fonts/lmroman17-regular.otf", FONT_LARGE*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    array_add(*_font_roman, font);
-    font = LoadFontExJai("../fonts/lmmono12-regular.otf", FONT_LARGE*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    array_add(*_font_mono , font);
-    font = LoadFontExJai("../fonts/lmsans10-regular.otf", FONT_LARGE*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    array_add(*_font_sans , font);
-    print("large font generated\n");
-
-
-
-    // _sdf_shader = LoadShader(null, "../shaders/sdf.fs");
-
-    // m := 2*2*2;
-
-    // array_add(*_font_roman, LoadSdfFont("../fonts/LMRoman5-Regular.ttf" ,  5*m) );
-    // array_add(*_font_roman, LoadSdfFont("../fonts/LMRoman6-Regular.ttf" ,  6*m) );
-    // array_add(*_font_roman, LoadSdfFont("../fonts/LMRoman7-Regular.ttf" ,  7*m) );
-    // array_add(*_font_roman, LoadSdfFont("../fonts/LMRoman8-Regular.ttf" ,  8*m) );
-    // array_add(*_font_roman, LoadSdfFont("../fonts/LMRoman9-Regular.ttf" ,  9*m) );
-    // array_add(*_font_roman, LoadSdfFont("../fonts/LMRoman10-Regular.ttf", 10*m) );
-    // array_add(*_font_roman, LoadSdfFont("../fonts/LMRoman12-Regular.ttf", 12*m) );
-    // array_add(*_font_roman, LoadSdfFont("../fonts/LMRoman17-Regular.ttf", 17*m) );
-
-    // array_add(*_font_sans, LoadSdfFont("../fonts/LMSans8-Regular.ttf" ,  8*m) );
-    // array_add(*_font_sans, LoadSdfFont("../fonts/LMSans9-Regular.ttf" ,  9*m) );
-    // array_add(*_font_sans, LoadSdfFont("../fonts/LMSans10-Regular.ttf", 10*m) );
-    // array_add(*_font_sans, LoadSdfFont("../fonts/LMSans12-Regular.ttf", 12*m) );
-    // array_add(*_font_sans, LoadSdfFont("../fonts/LMSans17-Regular.ttf", 17*m) );
-
-    // array_add(*_font_mono, LoadSdfFont("../fonts/LMMono8-Regular.ttf" ,  8*m) );
-    // array_add(*_font_mono, LoadSdfFont("../fonts/LMMono9-Regular.ttf" ,  9*m) );
-    // array_add(*_font_mono, LoadSdfFont("../fonts/LMMono10-Regular.ttf", 10*m) );
-    // array_add(*_font_mono, LoadSdfFont("../fonts/LMMono12-Regular.ttf", 12*m) );
-
-
-    // a : [..]Font;
-    // for i:1..20 {
-    //     array_add(*a, LoadFontEx("../fonts/LMRoman12-Regular.ttf", i));
-    // }
-
-
-    // for _font_roman SetTextureFilter(it.texture, xx TextureFilter.BILINEAR);
-    // for _font_mono  SetTextureFilter(it.texture, xx TextureFilter.BILINEAR);
-    // for _font_sans  SetTextureFilter(it.texture, xx TextureFilter.BILINEAR);
-}
-
-
-get_font :: (font_array: *[..]Font, font_size: int) -> Font {
-
-    m := ifx _plot.highdpi then 2 else 1;
-
-    if font_array.count == 0 {
-        print("first font in array\n");
-        font := LoadFontExJai("../fonts/lmroman12-regular.otf", font_size*m);
-        SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-        array_add(font_array, font);
-        return font;
-    }
-
-    for <<font_array {
-        if it.baseSize == m*font_size then
-            return it;
-
-        if it.baseSize > m*font_size {
-            print("loading new font, since it.baseSize = % > m*font_size = % || it_index = % == font_array.count-1 = %\n", it.baseSize, m*font_size, it_index, font_array.count-1);
-            font := LoadFontExJai("../fonts/lmroman12-regular.otf", font_size*m);
-            SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-            print("new font loaded\n");
-            array_insert_at(font_array, font, it_index);
-            print("new font inserted at %\n", it_index);
-
-            return font;
-        }
-    }
-
-    print("no font of size % (raw %) or larger found, so add to array\n", m*font_size, font_size);
-    font := LoadFontExJai("../fonts/lmroman12-regular.otf", font_size*m);
-    SetTextureFilter(font.texture, xx TextureFilter.BILINEAR);
-    print("new font loaded\n");
-    array_add(font_array, font);
-    print("new font added to array\n");
-    return font;
-}
-
-
-measure_text_regular :: inline (msg: string, font_size: int = 12) -> Vector2 {
-    return measure_text(*_font_roman, msg, font_size);
-}
-draw_text_regular :: inline (msg: string, position: Vector2, font_size: int = 12, color := BLACK) -> Vector2 {
-    draw_text(*_font_roman, msg, position, font_size, color);
-}
-measure_text_mono :: inline (msg: string, font_size: int = 12) -> Vector2 {
-    return measure_text(*_font_mono, msg, font_size);
-}
-draw_text_mono :: inline (msg: string, position: Vector2, font_size: int = 12, color := BLACK) -> Vector2 {
-    draw_text(*_font_mono, msg, position, font_size, color);
-}
-measure_text_sans :: inline (msg: string, font_size: int = 12) -> Vector2 {
-    return measure_text(*_font_sans, msg, font_size);
-}
-draw_text_sans :: inline (msg: string, position: Vector2, font_size: int = 12, color := BLACK) -> Vector2 {
-    draw_text(*_font_sans, msg, position, font_size, color);
-}
-
-measure_text :: (fonts: *[..]Font, msg: string, font_size: int = 12) -> Vector2 {
-    assert(font_size > 0);
-
-    font := get_font(fonts, font_size);
-    return MeasureTextExJai(font, msg, cast(float32)font_size, 0.0);
-}
-draw_text :: (fonts: *[..]Font, msg: string, position: Vector2, font_size: int = 12, color := BLACK) {
-    assert(font_size > 0);
-
-    font := get_font(fonts, font_size);
-    DrawTextExJai(font, msg, position, font_size, 0.0, color);
-}
-
 
 
 
@@ -351,6 +191,7 @@ plot_render :: () {
         WINDOW_RECT.height = cast(float)GetScreenHeight();
 
         // print("---------------------------------------------------\n");
+        update_fonts();
         update_plot();
 
         read_frame_events();
