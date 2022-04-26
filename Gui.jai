@@ -46,7 +46,7 @@ Button_Framed :: struct {
     is_over: bool = false;
     is_pressed: bool = false;
 }
-button_framed :: (rect: Rectangle, text := "", font_size : s32 = 12, line_color := GREY, fill_color := RAYWHITE) -> *Button_Framed {
+button_framed :: (rect: Rectangle, text := "", font_size : s32 = FONT_SMALL, line_color := GREY, fill_color := RAYWHITE) -> *Button_Framed {
     res := New(Button_Framed);
     res.type = Button_Framed;
     res.rect = rect;
@@ -133,7 +133,7 @@ Button_Tab :: struct {
     is_over: bool = false;
     is_pressed: bool = false;
 }
-button_tab :: (rect: Rectangle, text := "", font_size : s32 = 10, line_color := GREY, fill_color := RAYWHITE) -> *Button_Tab {
+button_tab :: (rect: Rectangle, text := "", font_size : s32 = FONT_SMALL, line_color := GREY, fill_color := RAYWHITE) -> *Button_Tab {
     res := New(Button_Tab);
     res.type = Button_Tab;
     res.rect = rect;
@@ -171,7 +171,7 @@ on_event :: (button: *Button_Tab, event: *Event) {
     }
 }
 draw :: (using button_framed: *Button_Tab) {
-    text_width := MeasureText(text, font_size);
+    text_width := measure_text_sans(text, font_size).x;
 
     tx := cast(s32)(rect.width  * 0.5 + rect.x - 0.5 * text_width);
     ty := cast(s32)(rect.height * 0.5 + rect.y - 0.5 * font_size );
@@ -201,7 +201,8 @@ draw :: (using button_framed: *Button_Tab) {
         DrawRectangleRec(rect, _fc);
     }
     
-    DrawText(text, tx, ty, font_size, BLACK);
+    draw_text_sans(text, vec2(tx, ty), font_size, BLACK);
+    // DrawTextJai(text, tx, ty, font_size, BLACK);
     DrawLineEx(vec2(rect.x           ,rect.y), vec2(rect.x+rect.width, rect.y            ), 2.0, lc);
     DrawLineEx(vec2(rect.x           ,rect.y), vec2(rect.x           , rect.y+rect.height), 2.0, lc);
     DrawLineEx(vec2(rect.x+rect.width,rect.y), vec2(rect.x+rect.width, rect.y+rect.height), 2.0, lc);

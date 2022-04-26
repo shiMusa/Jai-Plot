@@ -95,7 +95,8 @@ Axis_2D_Cartesian :: struct {
     axis_padding := Vector4.{60.0, 30.0, 60.0, 30.0}; // left, top, right, bottom
 
     // ticks
-    font_size : s32 = 20;
+    font_size : s32 = FONT_DEFAULT;
+    font_size_title : s32 = FONT_LARGE;
     tick_length := 5;
     tick_thickness := 2.0;
     y_padding := 8;
@@ -115,10 +116,10 @@ axis_2d_cartesian :: (x_mapper: *Mapper_1D = null, y_mapper: *Mapper_1D = null, 
     res.graphs2d  = NewResizableArray(0, *Graph_2D);
     res.activated = false;
 
-    res.button_reset         = button_framed(Rectangle.{}, "reset", res.font_size);
-    res.button_equal_scaling = button_framed(Rectangle.{}, "1:1"  , res.font_size);
-    res.button_fit           = button_framed(Rectangle.{}, "fit"  , res.font_size);
-    res.button_grid          = button_framed(Rectangle.{}, "#"    , res.font_size);
+    res.button_reset         = button_framed(Rectangle.{}, "reset");
+    res.button_equal_scaling = button_framed(Rectangle.{}, "1:1"  );
+    res.button_fit           = button_framed(Rectangle.{}, "fit"  );
+    res.button_grid          = button_framed(Rectangle.{}, "#"    );
 
     
     res.x_mapper = ifx x_mapper then x_mapper else mapper_1d_linear();
@@ -335,10 +336,10 @@ draw :: (using ax: *Axis_2D_Cartesian) {
 
 
     if title != "" {
-        fs := 2.0*font_size;
-        text_width := measure_text_regular(title, cast(int)fs).x;
+        fs := font_size_title;
+        text_width := measure_text_regular(title, fs).x;
         x := center_x(inner_rect) - 0.5*text_width;
-        draw_text_regular(title, vec2(x, axis_rectangle.y + 0.5*title_padding - 0.5*fs), cast(int)fs);
+        draw_text_regular(title, vec2(x, axis_rectangle.y + 0.5*title_padding - 0.5*fs), fs);
     }
 
     if x_label != "" {

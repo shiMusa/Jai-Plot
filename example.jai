@@ -140,7 +140,7 @@ main :: () {
         x_mapper := mapper_1d_constraint(mapper_1d_linear(), min_x = -2.0, max_x = 2.0);
         y_mapper := mapper_1d_constraint(mapper_1d_linear(), min_x = -2.0, max_x = 2.0);
         add_page(page_single(
-            axis_2d_cartesian(x_mapper, y_mapper, x_label="x axis", y_label="y axis"), 
+            axis_2d_cartesian(x_mapper, y_mapper, x_label="x axis", y_label="y axis", title="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"), 
             "circle"
         ));
 

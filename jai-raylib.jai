@@ -62,6 +62,32 @@ ShaderMode :: (shader: Shader) #expand {
 }
 
 
+LoadFontJai :: (file_name: string) -> Font {
+    cstr := to_c_string(file_name); defer free(cstr);
+    return LoadFont(cstr);
+}
+LoadFontExJai :: (file_name: string, font_size: int, font_chars: *s32 = null, glyph_count: int = 0) -> Font {
+    // cstr := to_c_string(file_name); defer free(cstr);
+    // return LoadFontEx(cstr, cast(s32)font_size, font_chars, cast(s32)glyph_count); // crashes!
+
+    c_file_name := to_c_string(file_name); defer free(c_file_name);
+
+    file_size : u32;
+    file_data := LoadFileData(c_file_name, *file_size);
+    print("% read: % bytes\n", file_name, file_size);
+
+    res : Font;
+    res.baseSize = cast(s32)font_size;
+    res.glyphCount = 95;
+    res.glyphs = LoadFontData(file_data, cast(s32)file_size, cast(s32)font_size, null, 0, xx FontType.DEFAULT);
+    atlas := GenImageFontAtlas(res.glyphs, *res.recs, 95, cast(s32)font_size, 4, 1);
+    res.texture = LoadTextureFromImage(atlas);
+    UnloadImage(atlas);
+    UnloadFileData(file_data);
+
+    return res;
+}
+
 LoadSdfFont :: (file_name: string, font_size: int) -> Font {
     c_file_name := to_c_string(file_name); defer free(c_file_name);
 
@@ -84,26 +110,26 @@ LoadSdfFont :: (file_name: string, font_size: int) -> Font {
 }
 
 
-DrawText :: (text: string, posx: s32, posy: s32, font_size: s32, color: Color) {
+DrawTextJai :: (text: string, posx: int, posy: int, font_size: int, color: Color) {
     cstr := to_c_string(text);
     defer free(cstr);
 
-    DrawText(cstr, posx, posy, font_size, color);
+    DrawText(cstr, cast(s32)posx, cast(s32)posy, cast(s32)font_size, color);
 }
-DrawTextEx :: (font: Font, text: string, position: Vector2, font_size: float, spacing: float, color: Color) {
+DrawTextExJai :: (font: Font, text: string, position: Vector2, font_size: int, spacing: float = 0, color := BLACK) {
     cstr := to_c_string(text);
     defer free(cstr);
 
-    DrawTextEx(font, cstr, position, font_size, spacing, color);
+    DrawTextEx(font, cstr, vec2(cast(s32)position.x, cast(s32)position.y), cast(float32)font_size, spacing, color);
 }
 
-MeasureText :: (text: string, font_size: s32) -> s32 {
+MeasureTextJai :: (text: string, font_size: s32) -> s32 {
     cstr := to_c_string(text);
     defer free(cstr);
 
     return MeasureText(cstr, font_size);
 }
-MeasureTextEx :: (font: Font, text: string, font_size: float, spacing: float) -> Vector2 {
+MeasureTextExJai :: (font: Font, text: string, font_size: float, spacing: float) -> Vector2 {
     cstr := to_c_string(text);
     defer free(cstr);
 
