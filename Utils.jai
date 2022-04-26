@@ -73,6 +73,9 @@ round_to_base :: (x: float32, $$base: float32 = 10.0, exponent_shift: float32 = 
     return rx, exponent;
 }
 
+round :: (x: $T) -> T {
+    return cast(T)(cast(s32)x);
+}
 
 
 // ######## ####  ######  ##    ##  ######

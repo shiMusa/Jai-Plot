@@ -190,8 +190,16 @@ rectangle :: (x: $X, y: $Y, width: $W, height: $H) -> Rectangle {
     res.height = cast(float32)height;
     return res;
 }
+pixel_align :: (r: Rectangle) -> Rectangle {
+    res: Rectangle = ---;
+    res.width = round(r.width);
+    res.height = round(r.height);
+    res.x = round(r.x);
+    res.y = round(r.y);
+    return res;
+}
 centrize :: (r: Rectangle) -> Rectangle {
-    res : Rectangle;
+    res : Rectangle = ---;
     res.width = r.width;
     res.height = r.height;
     res.x = r.x-0.5*r.width;
