@@ -127,8 +127,6 @@ get_font :: (font_type: TextFont_Types, font_size: int) -> bool, Font {
         array_add(*_font_creation, textfont_info(font_type, font_size));
     }
 
-    m := ifx _plot.highdpi then 2 else 1;
-
     if _fonts.count == 0 {
         print("first font in array\n");
         schedule();

@@ -147,31 +147,40 @@ axis_2d_cartesian :: (x_mapper: *Mapper_1D = null, y_mapper: *Mapper_1D = null, 
 update :: (using ax: *Axis_2D_Cartesian) {
 
 
-    if !x_label_texture {
-        // xw := 10 + MeasureText(x_label, font_size);
-        xw := 10 + cast(s32)measure_text_regular(x_label, font_size).x;
-        x_label_texture = New(RenderTexture2D, false);
-        <<x_label_texture = render_to_texture(xw, 2*font_size, #code {
-            // ClearBackground(TRANSPARENT);
-            ClearBackground(PURPLE);
+    if !x_label_texture || !y_label_texture {
+        ok, font := get_font(.ROMAN, font_size);
 
-            // DrawText(x_label, 5, cast(s32)(0.5*font_size), font_size, BLACK);
-            // draw_text_regular(x_label, vec2(5, cast(s32)(0.5*font_size)), font_size, BLACK);
-            draw_text_regular(x_label, vec2(5, cast(s32)(0.5*font_size)), font_size, BLACK);
-        });
-        // SetTextureFilter(x_label_texture.texture, xx TextureFilter.BILINEAR);
-    }
+        if !x_label_texture && ok {
+            // xw := 10 + MeasureText(x_label, font_size);
+            xw := 10 + cast(s32)measure_text_regular(x_label, font_size).x;
+            x_label_texture = New(RenderTexture2D, false);
+            <<x_label_texture = render_to_texture(2*xw, 2*2*font_size, #code {
+                ClearBackground(TRANSPARENT);
+                // ClearBackground(PURPLE);
 
-    if !y_label_texture {
-        // yw := 10 + MeasureText(y_label, font_size);
-        yw := 10 + cast(s32)measure_text_regular(y_label, font_size).x;
-        y_label_texture = New(RenderTexture2D, false);
-        <<y_label_texture = render_to_texture(yw, 2*font_size, #code {
-            ClearBackground(TRANSPARENT);
-            // DrawText(y_label, 5, cast(s32)(0.5*font_size), font_size, BLACK);
-            draw_text_regular(y_label, vec2(5, cast(s32)(0.5*font_size)), font_size, BLACK);
-        });
-        SetTextureFilter(y_label_texture.texture, xx TextureFilter.BILINEAR);
+                // DrawText(x_label, 5, cast(s32)(0.5*font_size), font_size, BLACK);
+                // draw_text_regular(x_label, vec2(5, cast(s32)(0.5*font_size)), font_size, BLACK);
+                
+                // draw_text_regular(x_label, vec2(5, cast(s32)(0.5*font_size)), 2*font_size, BLACK);
+                // DrawTextExJai(font, x_label, vec2(5, cast(s32)(0.5*font_size)), 2*font_size, 0.0, BLACK);
+                DrawTextExJai(font, x_label, vec2(5, cast(s32)(0.5*font_size)), 2*font_size);
+            });
+            SetTextureFilter(x_label_texture.texture, xx TextureFilter.BILINEAR);
+        }
+
+        if !y_label_texture && ok {
+            // yw := 10 + MeasureText(y_label, font_size);
+            yw := 10 + cast(s32)measure_text_regular(y_label, font_size).x;
+            y_label_texture = New(RenderTexture2D, false);
+            <<y_label_texture = render_to_texture(2*yw, 2*2*font_size, #code {
+                ClearBackground(TRANSPARENT);
+                // DrawText(y_label, 5, cast(s32)(0.5*font_sizeg), font_size, BLACK);
+                
+                // draw_text_regular(y_label, vec2(5, cast(s32)(0.5*font_size)), 2*font_size, BLACK);
+                DrawTextExJai(font, y_label, vec2(5, cast(s32)(0.5*font_size)), 2*font_size);
+            });
+            SetTextureFilter(y_label_texture.texture, xx TextureFilter.BILINEAR);
+        }
     }
 
 
@@ -379,13 +388,14 @@ draw :: (using ax: *Axis_2D_Cartesian) {
         label_pos := pixel_align(centrize(rectangle(
             center_x(inner_rect),
             bottom(axis_rectangle) - 0.5*y_label_padding,
-            tw,
-            th
+            tw*0.5,
+            th*0.5
         )));
         DrawTexturePro(x_label_texture.texture, tr, label_pos, vec2(), 0.0, WHITE);
 
         // debug test
         DrawTexture(x_label_texture.texture, 100, 100, BLACK);
+        draw_text(.ROMAN, "azAZ09", vec2(label_pos.x + 100, label_pos.y), font_size);
     }
 
     if y_label != "" && y_label_texture {
@@ -395,10 +405,10 @@ draw :: (using ax: *Axis_2D_Cartesian) {
         label_pos := pixel_align(rectangle(
             axis_rectangle.x + 0.5*y_label_padding,
             center_y(inner_rect),
-            tw,
-            th
+            tw*0.5,
+            th*0.5
         ));
-        DrawTexturePro(y_label_texture.texture, tr, label_pos, 0.5*vec2(tw,th), -90.0, WHITE);
+        DrawTexturePro(y_label_texture.texture, tr, label_pos, vec2(round(0.5*tw),round(0.5*th)), -90.0, WHITE);
     }
 
     if show_gui {

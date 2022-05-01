@@ -111,15 +111,11 @@ LoadSdfFont :: (file_name: string, font_size: int) -> Font {
 
 
 DrawTextJai :: (text: string, posx: int, posy: int, font_size: int, color: Color) {
-    cstr := to_c_string(text);
-    defer free(cstr);
-
+    cstr := to_c_string(text); defer free(cstr);
     DrawText(cstr, cast(s32)posx, cast(s32)posy, cast(s32)font_size, color);
 }
 DrawTextExJai :: (font: Font, text: string, position: Vector2, font_size: int, spacing: float = 0, color := BLACK) {
-    cstr := to_c_string(text);
-    defer free(cstr);
-
+    cstr := to_c_string(text); defer free(cstr);
     DrawTextEx(font, cstr, vec2(cast(s32)position.x, cast(s32)position.y), cast(float32)font_size, spacing, color);
 }
 
