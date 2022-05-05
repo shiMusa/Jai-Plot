@@ -394,8 +394,8 @@ draw :: (using ax: *Axis_2D_Cartesian) {
         DrawTexturePro(x_label_texture.texture, tr, label_pos, vec2(), 0.0, WHITE);
 
         // debug test
-        DrawTexture(x_label_texture.texture, 100, 100, BLACK);
-        draw_text(.ROMAN, "azAZ09", vec2(label_pos.x + 100, label_pos.y), font_size);
+        // DrawTexture(x_label_texture.texture, 100, 100, BLACK);
+        // draw_text(.ROMAN, "azAZ09", vec2(label_pos.x + 100, label_pos.y), font_size);
     }
 
     if y_label != "" && y_label_texture {
